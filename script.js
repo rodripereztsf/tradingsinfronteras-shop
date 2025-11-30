@@ -1,105 +1,84 @@
-// script.js
-
 // --- Estado del carrito en localStorage ---
 let cart = [];
 
+// Cargar carrito desde storage
 function loadCartFromStorage() {
   try {
-    const saved = localStorage.getItem('tsfCart');
-    cart = saved ? JSON.parse(saved) : [];
-  } catch (e) {
+    cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
+  } catch {
     cart = [];
   }
 }
 
+// Guardar carrito
 function saveCartToStorage() {
-  localStorage.setItem('tsfCart', JSON.stringify(cart));
+  localStorage.setItem("tsfCart", JSON.stringify(cart));
 }
 
-// --- Badge del carrito en el header ---
+// Actualizar badge del carrito
 function updateCartBadge() {
-  const btn = document.querySelector('.btn-cart');
+  const btn = document.querySelector(".btn-cart");
   if (!btn) return;
 
-  const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
-  btn.textContent = `Carrito (${totalItems})`;
+  const total = cart.reduce((s, p) => s + p.qty, 0);
+  btn.textContent = `Carrito (${total})`;
 }
 
-// --- Agregar producto al carrito ---
+// Agregar producto al carrito
 function addToCart(name, price) {
-  const numericPrice = Number(price) || 0;
-
-  const existingIndex = cart.findIndex(item => item.name === name);
-  if (existingIndex !== -1) {
-    cart[existingIndex].qty += 1;
-  } else {
-    cart.push({ name, price: numericPrice, qty: 1 });
-  }
+  const p = cart.find((i) => i.name === name);
+  if (p) p.qty++;
+  else cart.push({ name, price, qty: 1 });
 
   saveCartToStorage();
   updateCartBadge();
-  alert(`Se agregó al carrito: ${name}`);
+  alert(`Agregado al carrito: ${name}`);
 }
 
-// --- Render de la página de carrito (cart.html) ---
+// ----------------------
+// Render Carrito (cart.html)
+// ----------------------
 function renderCartPage() {
-  const tableBody = document.getElementById('cart-items');
-  const cartWrapper = document.getElementById('cart-wrapper');
-  const cartEmpty = document.getElementById('cart-empty');
-  const totalSpan = document.getElementById('cart-total');
+  const tbody = document.getElementById("cart-items");
+  const totalSpan = document.getElementById("cart-total");
+  const cartWrapper = document.getElementById("cart-wrapper");
+  const emptyMsg = document.getElementById("cart-empty");
 
-  // Si no estamos en cart.html, no hace nada
-  if (!tableBody || !cartWrapper || !cartEmpty || !totalSpan) return;
+  if (!tbody || !totalSpan) return;
 
   if (cart.length === 0) {
-    cartWrapper.style.display = 'none';
-    cartEmpty.style.display = 'block';
-    totalSpan.textContent = '$0';
+    cartWrapper.style.display = "none";
+    emptyMsg.style.display = "block";
+    totalSpan.textContent = "$0";
     return;
   }
 
-  cartWrapper.style.display = 'block';
-  cartEmpty.style.display = 'none';
+  cartWrapper.style.display = "block";
+  emptyMsg.style.display = "none";
+  tbody.innerHTML = "";
 
-  tableBody.innerHTML = '';
   let total = 0;
 
   cart.forEach((item, index) => {
-    const subtotal = item.price * item.qty;
+    const subtotal = item.qty * item.price;
     total += subtotal;
 
-    const tr = document.createElement('tr');
+    const row = document.createElement("tr");
 
-    const tdName = document.createElement('td');
-    tdName.textContent = item.name;
+    row.innerHTML = `
+      <td>${item.name}</td>
+      <td class="th-center">${item.qty}</td>
+      <td class="th-right">$${subtotal.toLocaleString("es-AR")}</td>
+      <td><button class="btn-remove" onclick="removeFromCart(${index})">X</button></td>
+    `;
 
-    const tdQty = document.createElement('td');
-    tdQty.className = 'th-center';
-    tdQty.textContent = item.qty;
-
-    const tdSubtotal = document.createElement('td');
-    tdSubtotal.className = 'th-right';
-    tdSubtotal.textContent = formatCurrency(subtotal);
-
-    const tdRemove = document.createElement('td');
-    const btn = document.createElement('button');
-    btn.textContent = 'X';
-    btn.className = 'btn-remove';
-    btn.onclick = () => removeFromCart(index);
-    tdRemove.appendChild(btn);
-
-    tr.appendChild(tdName);
-    tr.appendChild(tdQty);
-    tr.appendChild(tdSubtotal);
-    tr.appendChild(tdRemove);
-
-    tableBody.appendChild(tr);
+    tbody.appendChild(row);
   });
 
-  totalSpan.textContent = formatCurrency(total);
+  totalSpan.textContent = `$${total.toLocaleString("es-AR")}`;
 }
 
-// --- Quitar producto del carrito ---
+// Quitar producto
 function removeFromCart(index) {
   cart.splice(index, 1);
   saveCartToStorage();
@@ -108,46 +87,45 @@ function removeFromCart(index) {
   renderCheckoutPage();
 }
 
-// --- Render del checkout (checkout.html) ---
+// ----------------------
+// Render Checkout (checkout.html)
+// ----------------------
 function renderCheckoutPage() {
-  const list = document.getElementById('checkout-items');
-  const totalSpan = document.getElementById('checkout-total');
+  const list = document.getElementById("checkout-items");
+  const totalSpan = document.getElementById("checkout-total");
 
-  // Si no estamos en checkout.html, no hace nada
   if (!list || !totalSpan) return;
 
   if (cart.length === 0) {
-    list.innerHTML = '<li>No hay productos en el pedido.</li>';
-    totalSpan.textContent = '$0';
+    list.innerHTML = "<li>No hay productos en el pedido.</li>";
+    totalSpan.textContent = "$0";
     return;
   }
 
-  list.innerHTML = '';
+  list.innerHTML = "";
   let total = 0;
 
-  cart.forEach(item => {
-    const li = document.createElement('li');
-    const subtotal = item.price * item.qty;
+  cart.forEach((item) => {
+    const subtotal = item.qty * item.price;
     total += subtotal;
-    li.textContent = `${item.qty} × ${item.name} – ${formatCurrency(subtotal)}`;
+
+    const li = document.createElement("li");
+    li.textContent = `${item.qty} × ${item.name} — $${subtotal.toLocaleString("es-AR")}`;
     list.appendChild(li);
   });
 
-  totalSpan.textContent = formatCurrency(total);
+  totalSpan.textContent = `$${total.toLocaleString("es-AR")}`;
 }
 
-// --- Utilidad para formato moneda (ARS por defecto) ---
-function formatCurrency(value) {
-  return `$${value.toLocaleString('es-AR')}`;
-}
-
-// --- Inicialización global ---
-document.addEventListener('DOMContentLoaded', () => {
-  const yearSpan = document.getElementById('year');
-  if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-
+// ----------------------
+// Inicio global
+// ----------------------
+document.addEventListener("DOMContentLoaded", () => {
   loadCartFromStorage();
   updateCartBadge();
   renderCartPage();
   renderCheckoutPage();
+
+  const year = document.getElementById("year");
+  if (year) year.textContent = new Date().getFullYear();
 });
