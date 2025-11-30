@@ -50,6 +50,44 @@
     <p class="checkout-total">
       Total: <span id="checkout-total">$0</span>
     </p>
+<h2>Métodos de pago</h2>
+
+<div class="payment-box">
+
+  <div class="payment-option">
+    <h3>USD con Stripe (Recomendado)</h3>
+    <p class="payment-info">
+      Pago seguro en dólares. Conversión automática según el total del carrito.
+    </p>
+    <p class="payment-amount">Total en USD: <span id="usd-amount">...</span></p>
+    <button class="btn-primary" onclick="payWithStripe()">
+      Pagar con Stripe
+    </button>
+  </div>
+
+  <div class="payment-option">
+    <h3>USDT (BEP20)</h3>
+    <p class="payment-info">
+      Transferencia cripto directa. Mostraremos tu wallet y el monto exacto.
+    </p>
+    <p class="payment-amount">Total en USDT: <span id="usdt-amount">...</span></p>
+    <button class="btn-secondary" onclick="payWithUSDT()">
+      Pagar en USDT
+    </button>
+  </div>
+
+  <div class="payment-option">
+    <h3>ARS con Mercado Pago</h3>
+    <p class="payment-info">
+      Pago local en pesos argentinos, procesado por Mercado Pago.
+    </p>
+    <p class="payment-amount">Total en ARS: <span id="ars-amount">...</span></p>
+    <button class="btn-secondary" onclick="payWithMP()">
+      Pagar con Mercado Pago
+    </button>
+  </div>
+
+</div>
 
     <div class="checkout-actions">
       <a href="cart.html" class="btn-secondary">Volver al carrito</a>
