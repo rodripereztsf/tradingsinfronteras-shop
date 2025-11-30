@@ -120,11 +120,72 @@ function renderCheckoutPage() {
 // ----------------------
 // Inicio global
 // ----------------------
+// === Conversión de monedas ===
+// Tasa aproximada: ajustala como quieras
+const USD_RATE = 0.0010;  // 1 ARS = 0.0010 USD (ejemplo)
+const USDT_RATE = USD_RATE;
+
+// Obtener total del carrito en ARS
+function getCartTotal() {
+  return cart.reduce((sum, p) => sum + p.qty * p.price, 0);
+}
+
+// Renderizar montos en checkout
+function renderPaymentAmounts() {
+  const arsElem = document.getElementById("ars-amount");
+  const usdElem = document.getElementById("usd-amount");
+  const usdtElem = document.getElementById("usdt-amount");
+
+  if (!arsElem || !usdElem || !usdtElem) return;
+
+  const totalARS = getCartTotal();
+  const totalUSD = (totalARS * USD_RATE).toFixed(2);
+  const totalUSDT = (totalARS * USDT_RATE).toFixed(2);
+
+  arsElem.textContent = `$${totalARS.toLocaleString("es-AR")}`;
+  usdElem.textContent = `${totalUSD} USD`;
+  usdtElem.textContent = `${totalUSDT} USDT`;
+}
+
+// === ACCIONES DE PAGO ===
+
+// (1) Pagar con Stripe (USD)
+function payWithStripe() {
+  const totalARS = getCartTotal();
+  const totalUSD = (totalARS * USD_RATE).toFixed(2);
+
+  alert(`Redirigiendo a Stripe por ${totalUSD} USD (acá va tu link real)...`);
+
+  // Ejemplo:
+  // window.location.href = "https://checkout.stripe.com/pay/tu_link";
+}
+
+// (2) Pagar con USDT
+function payWithUSDT() {
+  const totalARS = getCartTotal();
+  const totalUSDT = (totalARS * USDT_RATE).toFixed(2);
+
+  alert(
+    `Enviar ${totalUSDT} USDT (BEP20) a:\n\n0xTUWALLET...\n\n(*Después podés agregar un QR acá*)`
+  );
+}
+
+// (3) Pagar con Mercado Pago (ARS)
+function payWithMP() {
+  const totalARS = getCartTotal();
+
+  alert(`Redirigiendo a Mercado Pago por ${totalARS} ARS...`);
+
+  // Ejemplo:
+  // window.location.href = "https://mpago.la/tu_link";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadCartFromStorage();
   updateCartBadge();
   renderCartPage();
   renderCheckoutPage();
+  renderPaymentAmounts();
 
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
