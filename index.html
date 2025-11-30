@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>TSF SHOP – Trading Sin Fronteras</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tipografía Google -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="tsf-header">
+    <div class="tsf-header-inner">
+      <div class="logo">
+        <span class="logo-main">TSF</span>
+        <span class="logo-sub">SHOP</span>
+      </div>
+      <nav class="nav">
+        <a href="#colecciones">Colecciones</a>
+        <a href="#destacados">Destacados</a>
+        <a href="#tsf">La comunidad</a>
+        <a href="cart.html" class="btn-cart">Carrito (0)</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-content">
+        <h1>TSF SHOP</h1>
+        <p>Merch premium para traders sin fronteras. Remeras, mates, cuadernos y más, diseñados para vivir el trading dentro y fuera de las pantallas.</p>
+        <a href="#destacados" class="btn-primary">Ver productos</a>
+      </div>
+    </section>
+
+    <!-- COLECCIONES -->
+    <section id="colecciones" class="section">
+      <h2>Colecciones</h2>
+      <div class="grid-colecciones">
+        <article class="card">
+          <h3>Remeras</h3>
+          <p>Minimalistas, negras, con logo TSF y frases épicas de trading.</p>
+        </article>
+        <article class="card">
+          <h3>Diario & Agenda</h3>
+          <p>Cuadernos diseñados para registrar cada operación y cada sesión.</p>
+        </article>
+        <article class="card">
+          <h3>Mate TSF</h3>
+          <p>Equipos de mate personalizados para aperturas largas y sesiones intensas.</p>
+        </article>
+        <article class="card">
+          <h3>Accesorios</h3>
+          <p>Llaveros, tazas, stickers y más para tu setup.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- DESTACADOS -->
+    <section id="destacados" class="section">
+      <h2>Productos destacados</h2>
+      <div class="grid-productos">
+        <article class="producto">
+          <h3>Remera Oficial TSF – Logo Oro</h3>
+          <p class="precio">$XX.XXX</p>
+          <button class="btn-secondary" onclick="addToCart('Remera Oficial TSF – Logo Oro')">
+            Agregar al carrito
+          </button>
+        </article>
+
+        <article class="producto">
+          <h3>Diario de Trading TSF</h3>
+          <p class="precio">$XX.XXX</p>
+          <button class="btn-secondary" onclick="addToCart('Diario de Trading TSF')">
+            Agregar al carrito
+          </button>
+        </article>
+
+        <article class="producto">
+          <h3>Mate TSF – Edición Aperturas</h3>
+          <p class="precio">$XX.XXX</p>
+          <button class="btn-secondary" onclick="addToCart('Mate TSF – Edición Aperturas')">
+            Agregar al carrito
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <!-- SECCIÓN COMUNIDAD -->
+    <section id="tsf" class="section section-dark">
+      <h2>La comunidad TSF</h2>
+      <p>
+        TSF SHOP nace desde Trading Sin Fronteras, una comunidad de traders que entrenan aperturas, 
+        liquidez y disciplina todos los días. Cada producto está pensado para recordarte que esto 
+        no es un hobby: es tu proyecto de vida.
+      </p>
+    </section>
+  </main>
+
+  <footer class="tsf-footer">
+    <p>© <span id="year"></span> TSF SHOP · Trading Sin Fronteras</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
