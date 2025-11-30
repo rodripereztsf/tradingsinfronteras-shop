@@ -105,6 +105,35 @@ function removeFromCart(index) {
   saveCartToStorage();
   updateCartBadge();
   renderCartPage();
+  renderCheckoutPage();
+}
+
+// --- Render del checkout (checkout.html) ---
+function renderCheckoutPage() {
+  const list = document.getElementById('checkout-items');
+  const totalSpan = document.getElementById('checkout-total');
+
+  // Si no estamos en checkout.html, no hace nada
+  if (!list || !totalSpan) return;
+
+  if (cart.length === 0) {
+    list.innerHTML = '<li>No hay productos en el pedido.</li>';
+    totalSpan.textContent = '$0';
+    return;
+  }
+
+  list.innerHTML = '';
+  let total = 0;
+
+  cart.forEach(item => {
+    const li = document.createElement('li');
+    const subtotal = item.price * item.qty;
+    total += subtotal;
+    li.textContent = `${item.qty} × ${item.name} – ${formatCurrency(subtotal)}`;
+    list.appendChild(li);
+  });
+
+  totalSpan.textContent = formatCurrency(total);
 }
 
 // --- Utilidad para formato moneda (ARS por defecto) ---
@@ -120,4 +149,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCartFromStorage();
   updateCartBadge();
   renderCartPage();
+  renderCheckoutPage();
 });
