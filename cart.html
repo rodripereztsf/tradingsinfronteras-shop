@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Carrito · TRADING SIN FRONTERAS SHOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="tsf-header">
+  <div class="tsf-header-inner">
+
+    <a href="index.html" class="logo-link">
+      <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" class="logo-img">
+      <div class="logo-text">
+        <span class="logo-title">TRADING SIN FRONTERAS</span>
+        <span class="logo-subtitle">SHOP</span>
+      </div>
+    </a>
+
+    <nav class="nav">
+      <a href="index.html#colecciones">Colecciones</a>
+      <a href="index.html#destacados">Destacados</a>
+      <a href="index.html#tsf">La comunidad</a>
+      <a href="cart.html" class="btn-cart">Carrito (0)</a>
+    </nav>
+
+  </div>
+</header>
+
+<main class="section">
+  <h1 class="carrito-title">Tu carrito</h1>
+
+  <p id="cart-empty" class="cart-empty">
+    Aún no agregaste productos al carrito.
+  </p>
+
+  <div id="cart-wrapper" class="cart-wrapper" style="display:none;">
+
+    <table class="cart-table">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th class="th-center">Cantidad</th>
+          <th class="th-right">Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="cart-items"></tbody>
+    </table>
+
+    <div class="cart-summary">
+      <p class="total">Total: <span id="cart-total">$0</span></p>
+
+      <div class="cart-actions">
+        <a href="index.html" class="btn-secondary">Seguir comprando</a>
+        <a href="checkout.html" class="btn-primary">Continuar al pago</a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="tsf-footer">
+  <p>© <span id="year"></span> TRADING SIN FRONTERAS SHOP</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
