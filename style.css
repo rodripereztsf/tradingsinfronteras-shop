@@ -378,3 +378,45 @@ a {
 .link-volver:hover {
   opacity: 1;
 }
+/* === Checkout === */
+
+.checkout-intro {
+  font-size: 0.95rem;
+  color: #c3c3c3;
+  max-width: 600px;
+  margin-bottom: 1.5rem;
+}
+
+.checkout-box {
+  background: #050505;
+  border-radius: 0.75rem;
+  border: 1px solid #111;
+  padding: 1.5rem;
+}
+
+.checkout-box h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.checkout-items {
+  list-style: none;
+  margin-bottom: 1rem;
+}
+
+.checkout-items li {
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #111;
+}
+
+.checkout-total {
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.checkout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
