@@ -206,3 +206,84 @@ a {
   font-size: 0.85rem;
   color: #00BFFF; /* celeste eléctrico TSF */
 }
+/* === Carrito === */
+.carrito-title {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.cart-empty {
+  font-size: 0.95rem;
+  color: #c3c3c3;
+}
+
+.cart-wrapper {
+  margin-top: 1rem;
+  background: #050505;
+  border-radius: 0.75rem;
+  border: 1px solid #111;
+  padding: 1.5rem;
+}
+
+.cart-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.cart-table th,
+.cart-table td {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cart-table thead th {
+  border-bottom: 1px solid #111;
+  text-align: left;
+  color: #d0d0d0;
+}
+
+.th-center {
+  text-align: center;
+}
+
+.th-right {
+  text-align: right;
+}
+
+.cart-table tbody tr:nth-child(even) {
+  background: #070707;
+}
+
+.btn-remove {
+  background: transparent;
+  border: 1px solid #333;
+  color: #999;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.btn-remove:hover {
+  border-color: #ff4b4b;
+  color: #ff4b4b;
+}
+
+.cart-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.cart-summary .total {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.cart-actions {
+  display: flex;
+  gap: 0.75rem;
+}
