@@ -1,7 +1,27 @@
-// --- Estado del carrito en localStorage ---
+// ==========================
+// CONFIGURACIÓN GENERAL
+// ==========================
+
+// URL base del backend donde estarán los endpoints /api
+// Cuando tengas tu backend en Vercel, cambialo por algo como:
+// const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+const API_BASE = "https://TU-DOMINIO-VERCEL.vercel.app"; // <-- CAMBIAR CUANDO TOQUE
+
+// Conversión ARS -> USD / USDT (ajustá el valor según tu criterio)
+// Ejemplo: 1 USD = 1000 ARS  =>  1 ARS = 1/1000 USD
+const USD_RATE = 1 / 1000;
+const USDT_RATE = USD_RATE;
+
+// Wallet USDT (BEP20)
+const USDT_WALLET = "0xTUWALLETBEP20AQUI"; // <-- CAMBIAR POR TU WALLET REAL
+
+
+// ==========================
+// ESTADO DEL CARRITO
+// ==========================
+
 let cart = [];
 
-// Cargar carrito desde storage
 function loadCartFromStorage() {
   try {
     cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
@@ -10,95 +30,120 @@ function loadCartFromStorage() {
   }
 }
 
-// Guardar carrito
 function saveCartToStorage() {
   localStorage.setItem("tsfCart", JSON.stringify(cart));
 }
 
-// Actualizar badge del carrito
 function updateCartBadge() {
   const btn = document.querySelector(".btn-cart");
   if (!btn) return;
 
-  const total = cart.reduce((s, p) => s + p.qty, 0);
-  btn.textContent = `Carrito (${total})`;
+  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  btn.textContent = `Carrito (${totalItems})`;
 }
 
-// Agregar producto al carrito
 function addToCart(name, price) {
-  const p = cart.find((i) => i.name === name);
-  if (p) p.qty++;
-  else cart.push({ name, price, qty: 1 });
+  const numericPrice = Number(price) || 0;
+  const existing = cart.find((item) => item.name === name);
+
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cart.push({ name, price: numericPrice, qty: 1 });
+  }
 
   saveCartToStorage();
   updateCartBadge();
-  alert(`Agregado al carrito: ${name}`);
+  renderCartPage();
+  renderCheckoutPage();
+  renderPaymentAmounts();
+  alert(`Se agregó al carrito: ${name}`);
 }
 
-// ----------------------
-// Render Carrito (cart.html)
-// ----------------------
-function renderCartPage() {
-  const tbody = document.getElementById("cart-items");
-  const totalSpan = document.getElementById("cart-total");
-  const cartWrapper = document.getElementById("cart-wrapper");
-  const emptyMsg = document.getElementById("cart-empty");
-
-  if (!tbody || !totalSpan) return;
-
-  if (cart.length === 0) {
-    cartWrapper.style.display = "none";
-    emptyMsg.style.display = "block";
-    totalSpan.textContent = "$0";
-    return;
-  }
-
-  cartWrapper.style.display = "block";
-  emptyMsg.style.display = "none";
-  tbody.innerHTML = "";
-
-  let total = 0;
-
-  cart.forEach((item, index) => {
-    const subtotal = item.qty * item.price;
-    total += subtotal;
-
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${item.name}</td>
-      <td class="th-center">${item.qty}</td>
-      <td class="th-right">$${subtotal.toLocaleString("es-AR")}</td>
-      <td><button class="btn-remove" onclick="removeFromCart(${index})">X</button></td>
-    `;
-
-    tbody.appendChild(row);
-  });
-
-  totalSpan.textContent = `$${total.toLocaleString("es-AR")}`;
-}
-
-// Quitar producto
 function removeFromCart(index) {
   cart.splice(index, 1);
   saveCartToStorage();
   updateCartBadge();
   renderCartPage();
   renderCheckoutPage();
+  renderPaymentAmounts();
 }
 
-// ----------------------
-// Render Checkout (checkout.html)
-// ----------------------
+
+// ==========================
+// UTILIDADES
+// ==========================
+
+function getCartTotal() {
+  return cart.reduce((sum, item) => sum + item.qty * item.price, 0);
+}
+
+function formatARS(value) {
+  return `$${value.toLocaleString("es-AR")}`;
+}
+
+
+// ==========================
+// RENDER: CARRITO (cart.html)
+// ==========================
+
+function renderCartPage() {
+  const tbody = document.getElementById("cart-items");
+  const totalSpan = document.getElementById("cart-total");
+  const wrapper = document.getElementById("cart-wrapper");
+  const emptyMsg = document.getElementById("cart-empty");
+
+  // Si no estamos en cart.html, salimos
+  if (!tbody || !totalSpan || !wrapper || !emptyMsg) return;
+
+  if (cart.length === 0) {
+    wrapper.style.display = "none";
+    emptyMsg.style.display = "block";
+    totalSpan.textContent = formatARS(0);
+    return;
+  }
+
+  wrapper.style.display = "block";
+  emptyMsg.style.display = "none";
+  tbody.innerHTML = "";
+
+  let total = 0;
+
+  cart.forEach((item, index) => {
+    const subtotal = item.price * item.qty;
+    total += subtotal;
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${item.name}</td>
+      <td class="th-center">${item.qty}</td>
+      <td class="th-right">${formatARS(subtotal)}</td>
+      <td>
+        <button class="btn-remove" onclick="removeFromCart(${index})">X</button>
+      </td>
+    `;
+
+    tbody.appendChild(row);
+  });
+
+  totalSpan.textContent = formatARS(total);
+}
+
+
+// ==========================
+// RENDER: CHECKOUT (checkout.html)
+// ==========================
+
 function renderCheckoutPage() {
   const list = document.getElementById("checkout-items");
   const totalSpan = document.getElementById("checkout-total");
 
+  // Si no estamos en checkout.html, salimos
   if (!list || !totalSpan) return;
 
   if (cart.length === 0) {
     list.innerHTML = "<li>No hay productos en el pedido.</li>";
-    totalSpan.textContent = "$0";
+    totalSpan.textContent = formatARS(0);
     return;
   }
 
@@ -106,79 +151,129 @@ function renderCheckoutPage() {
   let total = 0;
 
   cart.forEach((item) => {
-    const subtotal = item.qty * item.price;
+    const subtotal = item.price * item.qty;
     total += subtotal;
 
     const li = document.createElement("li");
-    li.textContent = `${item.qty} × ${item.name} — $${subtotal.toLocaleString("es-AR")}`;
+    li.textContent = `${item.qty} × ${item.name} — ${formatARS(subtotal)}`;
     list.appendChild(li);
   });
 
-  totalSpan.textContent = `$${total.toLocaleString("es-AR")}`;
+  totalSpan.textContent = formatARS(total);
 }
 
-// ----------------------
-// Inicio global
-// ----------------------
-// === Conversión de monedas ===
-// Tasa aproximada: ajustala como quieras
-const USD_RATE = 0.0010;  // 1 ARS = 0.0010 USD (ejemplo)
-const USDT_RATE = USD_RATE;
 
-// Obtener total del carrito en ARS
-function getCartTotal() {
-  return cart.reduce((sum, p) => sum + p.qty * p.price, 0);
-}
+// ==========================
+// RENDER: MONTOS DE PAGO (ARS / USD / USDT)
+// ==========================
 
-// Renderizar montos en checkout
 function renderPaymentAmounts() {
   const arsElem = document.getElementById("ars-amount");
   const usdElem = document.getElementById("usd-amount");
   const usdtElem = document.getElementById("usdt-amount");
 
+  // Si no estamos en checkout.html (o falta el bloque), salimos
   if (!arsElem || !usdElem || !usdtElem) return;
 
   const totalARS = getCartTotal();
   const totalUSD = (totalARS * USD_RATE).toFixed(2);
   const totalUSDT = (totalARS * USDT_RATE).toFixed(2);
 
-  arsElem.textContent = `$${totalARS.toLocaleString("es-AR")}`;
+  arsElem.textContent = formatARS(totalARS);
   usdElem.textContent = `${totalUSD} USD`;
   usdtElem.textContent = `${totalUSDT} USDT`;
 }
 
-// === ACCIONES DE PAGO ===
 
-// (1) Pagar con Stripe (USD)
-function payWithStripe() {
-  const totalARS = getCartTotal();
-  const totalUSD = (totalARS * USD_RATE).toFixed(2);
+// ==========================
+// PAGOS
+// ==========================
 
-  alert(`Redirigiendo a Stripe por ${totalUSD} USD (acá va tu link real)...`);
+// (1) Stripe en USD – usa backend /api/create-stripe-checkout
+async function payWithStripe() {
+  if (API_BASE.includes("TU-DOMINIO-VERCEL")) {
+    alert("Configura API_BASE en script.js con el dominio de tu backend (Vercel) antes de usar Stripe.");
+    return;
+  }
 
-  // Ejemplo:
-  // window.location.href = "https://checkout.stripe.com/pay/tu_link";
+  try {
+    const successUrl = window.location.origin + "/checkout-success-stripe.html";
+    const cancelUrl = window.location.href;
+
+    const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: cart,
+        successUrl,
+        cancelUrl,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert("No se pudo crear el pago con Stripe.");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Error al conectar con Stripe.");
+  }
 }
 
-// (2) Pagar con USDT
+// (2) Mercado Pago en ARS – usa backend /api/create-mp-preference
+async function payWithMP() {
+  if (API_BASE.includes("TU-DOMINIO-VERCEL")) {
+    alert("Configura API_BASE en script.js con el dominio de tu backend (Vercel) antes de usar Mercado Pago.");
+    return;
+  }
+
+  try {
+    const successUrl = window.location.origin + "/checkout-success-mp.html";
+    const cancelUrl = window.location.href;
+
+    const response = await fetch(`${API_BASE}/api/create-mp-preference`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: cart,
+        successUrl,
+        cancelUrl,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert("No se pudo crear el pago con Mercado Pago.");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Error al conectar con Mercado Pago.");
+  }
+}
+
+// (3) USDT (BEP20) – sin backend, pago manual cripto
 function payWithUSDT() {
   const totalARS = getCartTotal();
   const totalUSDT = (totalARS * USDT_RATE).toFixed(2);
 
   alert(
-    `Enviar ${totalUSDT} USDT (BEP20) a:\n\n0xTUWALLET...\n\n(*Después podés agregar un QR acá*)`
+    `Para completar el pago en USDT (BEP20):\n\n` +
+      `1) Enviá ${totalUSDT} USDT a esta wallet:\n` +
+      `${USDT_WALLET}\n\n` +
+      `2) Enviá el comprobante por el canal que definas (mail / soporte / etc.).`
   );
 }
 
-// (3) Pagar con Mercado Pago (ARS)
-function payWithMP() {
-  const totalARS = getCartTotal();
 
-  alert(`Redirigiendo a Mercado Pago por ${totalARS} ARS...`);
-
-  // Ejemplo:
-  // window.location.href = "https://mpago.la/tu_link";
-}
+// ==========================
+// INICIALIZACIÓN GLOBAL
+// ==========================
 
 document.addEventListener("DOMContentLoaded", () => {
   loadCartFromStorage();
