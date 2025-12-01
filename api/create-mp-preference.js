@@ -5,7 +5,22 @@ mercadopago.configure({
   access_token: process.env.MP_ACCESS_TOKEN,
 });
 
+const setCors = (res) => {
+  res.setHeader("Access-Control-Allow-Origin", "https://rodripereztsf.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+};
+
 module.exports = async (req, res) => {
+  setCors(res);
+
+  // Preflight CORS
+  if (req.method === "OPTIONS") {
+    res.statusCode = 200;
+    res.end();
+    return;
+  }
+
   if (req.method !== "POST") {
     res.statusCode = 405;
     res.setHeader("Content-Type", "application/json");
