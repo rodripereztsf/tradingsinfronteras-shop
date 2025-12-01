@@ -3,7 +3,24 @@ const Stripe = require("stripe");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Opcional: podés poner tu dominio exacto en vez de "*"
+const setCors = (res) => {
+  res.setHeader("Access-Control-Allow-Origin", "https://rodripereztsf.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+};
+
 module.exports = async (req, res) => {
+  setCors(res);
+
+  // Preflight CORS (OPTIONS) → responde OK y corta
+  if (req.method === "OPTIONS") {
+    res.statusCode = 200;
+    res.end();
+    return;
+  }
+
+  // Solo aceptamos POST
   if (req.method !== "POST") {
     res.statusCode = 405;
     res.setHeader("Content-Type", "application/json");
@@ -23,7 +40,7 @@ module.exports = async (req, res) => {
         product_data: {
           name: item.name,
         },
-        unit_amount: Math.round(item.price * USD_RATE * 100), // a centavos
+        unit_amount: Math.round(item.price * USD_RATE * 100), // en centavos
       },
       quantity: item.qty,
     }));
