@@ -5,7 +5,7 @@
 // URL base del backend donde estarán los endpoints /api
 // Cuando tengas tu backend en Vercel, cambialo por algo como:
 // const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
-const API_BASE = "tradingsinfronteras-shop.vercel.app"; // <-- CAMBIAR CUANDO TOQUE
+const API_BASE = "https://tradingsinfronteras-shop.vercel.app"; // <-- CAMBIAR CUANDO TOQUE
 
 // Conversión ARS -> USD / USDT (ajustá el valor según tu criterio)
 // Ejemplo: 1 USD = 1000 ARS  =>  1 ARS = 1/1000 USD
@@ -191,10 +191,6 @@ function renderPaymentAmounts() {
 
 // (1) Stripe en USD – usa backend /api/create-stripe-checkout
 async function payWithStripe() {
-  if (API_BASE.includes("TU-DOMINIO-VERCEL")) {
-    alert("Configura API_BASE en script.js con el dominio de tu backend (Vercel) antes de usar Stripe.");
-    return;
-  }
 
   try {
     const successUrl = window.location.origin + "/checkout-success-stripe.html";
@@ -225,10 +221,6 @@ async function payWithStripe() {
 
 // (2) Mercado Pago en ARS – usa backend /api/create-mp-preference
 async function payWithMP() {
-  if (API_BASE.includes("TU-DOMINIO-VERCEL")) {
-    alert("Configura API_BASE en script.js con el dominio de tu backend (Vercel) antes de usar Mercado Pago.");
-    return;
-  }
 
   try {
     const successUrl = window.location.origin + "/checkout-success-mp.html";
