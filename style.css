@@ -483,3 +483,20 @@ header.tsf-header {
     font-weight: 600;
     color: #00CFFF; /* celeste oficial TSF */
 }
+/* Color correcto celeste TSF */
+.logo-sub {
+    color: #00CFFF !important;
+}
+/* Ajuste de tamaño y separación del logo */
+header .logo img {
+    height: 32px !important;
+    width: auto !important;
+}
+
+header .logo-main {
+    font-size: 20px !important;
+}
+
+header .logo-sub {
+    font-size: 12.5px !important;
+}
