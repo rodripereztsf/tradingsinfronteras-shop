@@ -59,7 +59,43 @@
   <script>
     // Detectamos automáticamente la clave del carrito en localStorage
     // para no romper lo que ya estaba hecho.
-    const POSSIBLE_CART_KEYS = ["tsf_cart", "cart", "carrito", "carritoTSF"];
+  // Detectamos automáticamente TODAS las posibles keys que pueden haber quedado guardadas.
+const POSSIBLE_CART_KEYS = [
+  "tsf_cart",
+  "cart",
+  "carrito",
+  "carritoTSF",
+  "carrito-productos",
+  "productos",
+  "shopping_cart",
+  "rodri_cart",
+  "tsfshop_cart"
+];
+
+let CART_KEY = null;
+
+function detectCartKey() {
+  for (const key of POSSIBLE_CART_KEYS) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log("✔️ Carrito encontrado en localStorage key:", key);
+        CART_KEY = key;
+        return;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
+  // Si no encuentra nada, usa esta por defecto
+  console.log("⚠️ No se encontró ningún carrito, usando key por defecto.");
+  CART_KEY = "tsf_cart";
+}
+
     let CART_KEY = null;
 
     function detectCartKey() {
