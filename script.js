@@ -5,7 +5,7 @@
 // URL base del backend donde estarán los endpoints /api
 // Cuando tengas tu backend en Vercel, cambialo por algo como:
 // const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
-const API_BASE = "https://TU-DOMINIO-VERCEL.vercel.app"; // <-- CAMBIAR CUANDO TOQUE
+const API_BASE = "tradingsinfronteras-shop.vercel.app"; // <-- CAMBIAR CUANDO TOQUE
 
 // Conversión ARS -> USD / USDT (ajustá el valor según tu criterio)
 // Ejemplo: 1 USD = 1000 ARS  =>  1 ARS = 1/1000 USD
