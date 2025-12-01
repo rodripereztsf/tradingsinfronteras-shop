@@ -99,7 +99,7 @@
        BOTÓN STRIPE
     ============================ */
     document.getElementById("btn-stripe").addEventListener("click", async () => {
-      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      const cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
 
       const res = await fetch(`${API_BASE}/api/stripe-checkout`, {
         method: "POST",
@@ -131,7 +131,7 @@
        BOTÓN MERCADO PAGO
     ============================ */
     document.getElementById("btn-mp").addEventListener("click", async () => {
-      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      const cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
 
       if (cart.length === 0) {
         alert("El carrito está vacío");
