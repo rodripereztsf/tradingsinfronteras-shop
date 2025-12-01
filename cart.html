@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Carrito · TSF Shop</title>
+  <title>Carrito · TSF SHOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -29,27 +29,22 @@
     <ul id="cart-items" class="cart-items"></ul>
 
     <div class="cart-summary">
-      <p>Total USD: <span id="cart-total">0</span></p>
+      <p>Total USD: <span id="cart-total">0.00</span></p>
     </div>
 
     <!-- BOTONES DE PAGO -->
     <div class="checkout-buttons">
-
-      <!-- Pagar con Stripe -->
       <button id="btn-stripe" class="btn-primary">
         Pagar en USD (Stripe)
       </button>
 
-      <!-- Pagar con USDT -->
       <button id="btn-usdt" class="btn-secondary">
         Pagar con USDT (BEP20)
       </button>
 
-      <!-- Pagar con Mercado Pago -->
       <button id="btn-mp" class="btn-primary">
         Pagar en ARS (Mercado Pago)
       </button>
-
     </div>
   </main>
 
@@ -57,23 +52,57 @@
     <p>© 2025 TSF SHOP · Trading Sin Fronteras</p>
   </footer>
 
+  <!-- Script general de la tienda (API_BASE, USDT_WALLET, etc.) -->
   <script src="script.js"></script>
 
+  <!-- Lógica específica del carrito -->
   <script>
-    /* ============================
-       CARGAR CARRITO EN LA PÁGINA
-    ============================ */
+    // Detectamos automáticamente la clave del carrito en localStorage
+    // para no romper lo que ya estaba hecho.
+    const POSSIBLE_CART_KEYS = ["tsf_cart", "cart", "carrito", "carritoTSF"];
+    let CART_KEY = null;
 
+    function detectCartKey() {
+      for (const key of POSSIBLE_CART_KEYS) {
+        const raw = localStorage.getItem(key);
+        if (raw && raw !== "[]" && raw !== "null") {
+          CART_KEY = key;
+          return;
+        }
+      }
+      // Si no hay ninguna, usamos una por defecto
+      CART_KEY = POSSIBLE_CART_KEYS[0];
+    }
+
+    detectCartKey();
+
+    function getCart() {
+      const raw = localStorage.getItem(CART_KEY);
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error("Error parseando carrito:", e);
+        return [];
+      }
+    }
+
+    function saveCart(cart) {
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    }
+
+    // ============================
+    // CARGAR CARRITO EN LA PÁGINA
+    // ============================
     function loadCart() {
-      const cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
+      const cart = getCart();
       const container = document.getElementById("cart-items");
-      const total = document.getElementById("cart-total");
+      const totalEl = document.getElementById("cart-total");
 
       container.innerHTML = "";
-
       let sum = 0;
 
-      cart.forEach((item, i) => {
+      cart.forEach((item, index) => {
         sum += item.price * item.qty;
 
         const li = document.createElement("li");
@@ -85,80 +114,108 @@
             Cantidad: ${item.qty}<br>
             Precio: USD ${item.price}
           </div>
+          <button class="btn-secondary btn-remove" data-index="${index}">
+            Eliminar
+          </button>
         `;
 
         container.appendChild(li);
       });
 
-      total.textContent = sum.toFixed(2);
+      totalEl.textContent = sum.toFixed(2);
+
+      // Asociar eventos a los botones "Eliminar"
+      document.querySelectorAll(".btn-remove").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          const idx = Number(e.target.getAttribute("data-index"));
+          const currentCart = getCart();
+          currentCart.splice(idx, 1);
+          saveCart(currentCart);
+          loadCart();
+        });
+      });
     }
 
     loadCart();
 
-    /* ============================
-       BOTÓN STRIPE
-    ============================ */
+    // ============================
+    // PAGO CON STRIPE (USD)
+    // ============================
     document.getElementById("btn-stripe").addEventListener("click", async () => {
-      const cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
-
-      const res = await fetch(`${API_BASE}/api/stripe-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart })
-      });
-
-      const data = await res.json();
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert("Error al iniciar pago con Stripe");
-      }
-    });
-
-    /* ============================
-       BOTÓN USDT
-    ============================ */
-    document.getElementById("btn-usdt").addEventListener("click", () => {
-      alert(
-        "Para pagar con USDT (BEP20) envía el monto total a:\n\n" +
-        USDT_WALLET +
-        "\n\nLuego envía el comprobante por WhatsApp."
-      );
-    });
-
-    /* ============================
-       BOTÓN MERCADO PAGO
-    ============================ */
-    document.getElementById("btn-mp").addEventListener("click", async () => {
-      const cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
-
-      if (cart.length === 0) {
+      const cart = getCart();
+      if (!cart.length) {
         alert("El carrito está vacío");
         return;
       }
 
       try {
-        const res = await fetch(`${API_BASE}/api/mp-checkout`, {
+        const successUrl = window.location.origin + "/checkout-success-stripe.html";
+        const cancelUrl = window.location.href;
+
+        const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: cart })
+          body: JSON.stringify({ items: cart, successUrl, cancelUrl }),
         });
 
-        const data = await res.json();
+        const data = await response.json();
 
-        if (data.init_point) {
-          window.location.href = data.init_point;
+        if (data.url) {
+          window.location.href = data.url;
         } else {
-          alert("Error creando orden en Mercado Pago");
+          alert("No se pudo crear el pago con Stripe.");
           console.log(data);
         }
       } catch (e) {
-        alert("Error conectando con Mercado Pago");
-        console.log(e);
+        console.error(e);
+        alert("Error al conectar con Stripe.");
       }
     });
 
+    // ============================
+    // PAGO CON USDT (BEP20)
+    // ============================
+    document.getElementById("btn-usdt").addEventListener("click", () => {
+      alert(
+        "Para pagar con USDT (BEP20) enviá el monto total a:\n\n" +
+        USDT_WALLET +
+        "\n\nLuego enviá el comprobante por WhatsApp o el canal que definamos."
+      );
+    });
+
+    // ============================
+    // PAGO CON MERCADO PAGO (ARS)
+    // ============================
+    document.getElementById("btn-mp").addEventListener("click", async () => {
+      const cart = getCart();
+      if (!cart.length) {
+        alert("El carrito está vacío");
+        return;
+      }
+
+      try {
+        const successUrl = window.location.origin + "/checkout-success-mp.html";
+        const cancelUrl = window.location.href;
+
+        const response = await fetch(`${API_BASE}/api/create-mp-preference`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: cart, successUrl, cancelUrl }),
+        });
+
+        const data = await response.json();
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert("No se pudo crear el pago con Mercado Pago.");
+          console.log(data);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Error al conectar con Mercado Pago.");
+      }
+    });
   </script>
 </body>
 </html>
