@@ -1,18 +1,22 @@
 // api/create-mp-preference.js
-import mercadopago from "mercadopago";
+const mercadopago = require("mercadopago");
 
 mercadopago.configure({
   access_token: process.env.MP_ACCESS_TOKEN,
 });
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") {
-    return res.status(405).end("Method not allowed");
+    res.statusCode = 405;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
   }
 
   try {
     const { items, successUrl, cancelUrl } = req.body;
 
+    // items: [{ name, price, qty }] en ARS
     const preference = {
       items: items.map((item) => ({
         title: item.name,
@@ -29,9 +33,14 @@ export default async function handler(req, res) {
     };
 
     const response = await mercadopago.preferences.create(preference);
-    res.status(200).json({ url: response.body.init_point });
+
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ url: response.body.init_point }));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error creating MP preference" });
+    console.error("Mercado Pago error:", err);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "Error creating MP preference" }));
   }
-}
+};
