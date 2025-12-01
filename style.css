@@ -455,3 +455,31 @@ a {
 .payment-amount span {
   color: #00BFFF;
 }
+/* === FIX GLOBAL PARA UNIFICAR HEADER === */
+header.tsf-header {
+    padding: 20px 40px !important;
+}
+
+.tsf-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.logo-main {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.logo-sub {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00CFFF; /* celeste oficial TSF */
+}
