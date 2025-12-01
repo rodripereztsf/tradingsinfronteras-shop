@@ -5,14 +5,140 @@
   <title>Carrito · TSF SHOP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Estilos específicos del carrito para organizar mejor la vista -->
+  <style>
+    .cart-items {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 20px;
+      max-width: 800px;
+    }
+
+    .cart-item {
+      margin-bottom: 12px;
+    }
+
+    .cart-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .cart-item-info {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .cart-item-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .cart-item-meta {
+      opacity: 0.85;
+    }
+
+    .cart-item-right {
+      text-align: right;
+      min-width: 130px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .cart-item-price {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .cart-item-remove {
+      border: none;
+      background: transparent;
+      color: #ff6b6b;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0;
+    }
+
+    .cart-item-remove:hover {
+      text-decoration: underline;
+    }
+
+    .cart-summary {
+      margin-top: 20px;
+      margin-bottom: 24px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .checkout-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Un poquito de ajuste para el logo con imagen */
+    .logo-with-img {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-with-img img {
+      height: 32px;
+      width: 32px;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+
+    .logo-text-block {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .logo-text-main {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .logo-text-sub {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 600px) {
+      .cart-item-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .cart-item-right {
+        align-items: flex-start;
+      }
+    }
+  </style>
 </head>
 
 <body>
+  <!-- HEADER: aquí podés dejar igual al de index.html.
+       Si querés que sea EXACTAMENTE igual, copiá el <header> de index.html y pegalo acá. -->
   <header class="tsf-header">
     <div class="tsf-header-inner">
-      <div class="logo">
-        <span class="logo-main">TSF</span>
-        <span class="logo-sub">SHOP</span>
+      <div class="logo logo-with-img">
+        <!-- Usá la misma imagen/logo que en las otras páginas -->
+        <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" />
+        <div class="logo-text-block">
+          <span class="logo-text-main">TRADING SIN FRONTERAS</span>
+          <span class="logo-text-sub">SHOP</span>
+        </div>
       </div>
       <nav class="nav">
         <a href="index.html">Inicio</a>
@@ -29,7 +155,7 @@
     <ul id="cart-items" class="cart-items"></ul>
 
     <div class="cart-summary">
-      <p>Total USD: <span id="cart-total">0.00</span></p>
+      Total USD: <span id="cart-total">0.00</span>
     </div>
 
     <div class="checkout-buttons">
@@ -51,18 +177,19 @@
     <p>© 2025 TSF SHOP · Trading Sin Fronteras</p>
   </footer>
 
-  <!-- Configuración general (API_BASE, USDT_WALLET, etc.) -->
+  <!-- Configuración general: API_BASE, USDT_WALLET, etc. -->
   <script src="script.js"></script>
 
-  <!-- Lógica del carrito -->
+  <!-- Lógica del carrito (misma que ya funciona, pero con layout mejorado) -->
   <script>
     // =======================================
-    // DETECCIÓN AUTOMÁTICA DE LA KEY DEL CARRITO
+    // DETECCIÓN DE CARRITO EN LOCALSTORAGE
     // =======================================
     let CART_KEY = null;
+    let CART_WRAPPER_TYPE = "array"; // "array" o "object-items"
+    let ORIGINAL_WRAPPER_OBJECT = null;
 
     function detectCartKey() {
-      // Recorremos TODO localStorage y buscamos un array de objetos (tu carrito)
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         try {
@@ -71,21 +198,38 @@
 
           const parsed = JSON.parse(raw);
 
+          // 1) directamente es un array de productos
           if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
-            // Encontramos un candidato razonable de carrito
-            console.log("Carrito detectado en localStorage key:", key);
             CART_KEY = key;
+            CART_WRAPPER_TYPE = "array";
+            ORIGINAL_WRAPPER_OBJECT = null;
+            console.log("Carrito detectado (array) en key:", key);
+            return;
+          }
+
+          // 2) objeto con propiedad "items" como array de productos
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            Array.isArray(parsed.items) &&
+            parsed.items.length > 0 &&
+            typeof parsed.items[0] === "object"
+          ) {
+            CART_KEY = key;
+            CART_WRAPPER_TYPE = "object-items";
+            ORIGINAL_WRAPPER_OBJECT = parsed;
+            console.log("Carrito detectado (object.items) en key:", key);
             return;
           }
         } catch (e) {
-          // No era JSON, seguimos
           continue;
         }
       }
 
-      // Si no encontramos nada, usamos una por defecto
       console.log("No se encontró carrito en localStorage. Usando key por defecto 'tsf_cart'.");
       CART_KEY = "tsf_cart";
+      CART_WRAPPER_TYPE = "array";
+      ORIGINAL_WRAPPER_OBJECT = null;
     }
 
     detectCartKey();
@@ -95,19 +239,36 @@
       if (!raw) return [];
       try {
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        if (CART_WRAPPER_TYPE === "array" && Array.isArray(parsed)) {
+          return parsed;
+        }
+        if (
+          CART_WRAPPER_TYPE === "object-items" &&
+          parsed &&
+          typeof parsed === "object" &&
+          Array.isArray(parsed.items)
+        ) {
+          return parsed.items;
+        }
+        return [];
       } catch (e) {
         console.error("Error parseando carrito:", e);
         return [];
       }
     }
 
-    function saveCart(cart) {
-      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    function saveCart(cartArray) {
+      if (CART_WRAPPER_TYPE === "array") {
+        localStorage.setItem(CART_KEY, JSON.stringify(cartArray));
+      } else if (CART_WRAPPER_TYPE === "object-items") {
+        const wrapper = ORIGINAL_WRAPPER_OBJECT || {};
+        wrapper.items = cartArray;
+        localStorage.setItem(CART_KEY, JSON.stringify(wrapper));
+      }
     }
 
     // =======================================
-    // CARGAR CARRITO EN LA PÁGINA
+    // CARGAR CARRITO EN LA PÁGINA (layout lindo)
     // =======================================
     function loadCart() {
       const cart = getCart();
@@ -117,41 +278,55 @@
       container.innerHTML = "";
       let sum = 0;
 
-      cart.forEach((item, index) => {
-        const price = Number(item.price) || 0;
-        const qty = Number(item.qty || item.quantity || 1);
-
-        sum += price * qty;
-
+      if (!cart.length) {
         const li = document.createElement("li");
-        li.classList.add("cart-item");
-
-        li.innerHTML = `
-          <div>
-            <strong>${item.name || item.titulo || "Producto"}</strong><br>
-            Cantidad: ${qty}<br>
-            Precio: USD ${price.toFixed(2)}
-          </div>
-          <button class="btn-secondary btn-remove" data-index="${index}">
-            Eliminar
-          </button>
-        `;
-
+        li.textContent = "Tu carrito está vacío.";
         container.appendChild(li);
-      });
+      } else {
+        cart.forEach((item, index) => {
+          const price = Number(item.price || item.precio || 0);
+          const qty = Number(item.qty || item.quantity || item.cantidad || 1);
+
+          sum += price * qty;
+
+          const li = document.createElement("li");
+          li.classList.add("cart-item");
+
+          li.innerHTML = `
+            <div class="cart-item-row">
+              <div class="cart-item-info">
+                <div class="cart-item-name">
+                  ${item.name || item.titulo || item.nombre || "Producto"}
+                </div>
+                <div class="cart-item-meta">
+                  Cantidad: ${qty}
+                </div>
+              </div>
+              <div class="cart-item-right">
+                <div class="cart-item-price">USD ${(price * qty).toFixed(2)}</div>
+                <button class="cart-item-remove" data-index="${index}" title="Eliminar">
+                  ✕ Eliminar
+                </button>
+              </div>
+            </div>
+          `;
+
+          container.appendChild(li);
+        });
+
+        // Eventos de eliminar
+        document.querySelectorAll(".cart-item-remove").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            const idx = Number(e.target.getAttribute("data-index"));
+            const currentCart = getCart();
+            currentCart.splice(idx, 1);
+            saveCart(currentCart);
+            loadCart();
+          });
+        });
+      }
 
       totalEl.textContent = sum.toFixed(2);
-
-      // Botones "Eliminar"
-      document.querySelectorAll(".btn-remove").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          const idx = Number(e.target.getAttribute("data-index"));
-          const currentCart = getCart();
-          currentCart.splice(idx, 1);
-          saveCart(currentCart);
-          loadCart();
-        });
-      });
     }
 
     loadCart();
