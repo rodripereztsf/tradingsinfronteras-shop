@@ -277,30 +277,3 @@ document.addEventListener("DOMContentLoaded", () => {
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
 });
-// =======================================
-// PRODUCTO DE PRUEBA PARA MERCADO PAGO
-// =======================================
-
-// Si tu tienda ya usa un array "products", agregamos uno de prueba:
-try {
-  if (window.products && Array.isArray(window.products)) {
-    // Verificamos que no exista ya
-    const already = window.products.find(p => p.id === "test-mp-500");
-    if (!already) {
-      window.products.push({
-        id: "test-mp-500",
-        name: "Producto TEST Mercado Pago",
-        description: "Producto de prueba para validar pagos en ARS. No se envía mercadería.",
-        price: 500, // ESTE 500 ES EL QUE VA A IR A MERCADO PAGO COMO 500 ARS
-        category: "Test",
-        image: "IMG_9274.PNG", // o cualquier imagen existente en tu repo
-        badge: "TEST"
-      });
-      console.log("✅ Producto TEST Mercado Pago agregado al catálogo.");
-    }
-  } else {
-    console.log("ℹ️ No se encontró 'products' en window. El producto TEST no se inyectó automáticamente.");
-  }
-} catch (e) {
-  console.log("Error al agregar producto TEST MP:", e);
-}
