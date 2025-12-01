@@ -1,23 +1,28 @@
 // api/create-stripe-checkout.js
-import Stripe from "stripe";
+const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") {
-    return res.status(405).end("Method not allowed");
+    res.statusCode = 405;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
   }
 
   try {
     const { items, successUrl, cancelUrl } = req.body;
 
-    // items viene del frontend: [{ name, price, qty }]
-    // price está en ARS, lo convertimos a USD
-    const USD_RATE = 1 / 1000; // mismo valor que uses en el front
+    // items: [{ name, price, qty }]
+    const USD_RATE = 1 / 1000; // MISMO VALOR QUE EN script.js
+
     const line_items = items.map((item) => ({
       price_data: {
         currency: "usd",
-        product_data: { name: item.name },
+        product_data: {
+          name: item.name,
+        },
         unit_amount: Math.round(item.price * USD_RATE * 100), // a centavos
       },
       quantity: item.qty,
@@ -30,9 +35,13 @@ export default async function handler(req, res) {
       cancel_url: cancelUrl,
     });
 
-    res.status(200).json({ url: session.url });
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ url: session.url }));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error creating Stripe checkout" });
+    console.error("Stripe error:", err);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "Error creating Stripe checkout" }));
   }
-}
+};
