@@ -1,73 +1,164 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Carrito · TRADING SIN FRONTERAS SHOP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Carrito · TSF Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-
-<header class="tsf-header">
-  <div class="tsf-header-inner">
-
-    <a href="index.html" class="logo-link">
-      <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" class="logo-img">
-      <div class="logo-text">
-        <span class="logo-title">TRADING SIN FRONTERAS</span>
-        <span class="logo-subtitle">SHOP</span>
+  <header class="tsf-header">
+    <div class="tsf-header-inner">
+      <div class="logo">
+        <span class="logo-main">TSF</span>
+        <span class="logo-sub">SHOP</span>
       </div>
-    </a>
+      <nav class="nav">
+        <a href="index.html">Inicio</a>
+        <a href="index.html#colecciones">Colecciones</a>
+        <a href="index.html#destacados">Destacados</a>
+        <a href="cart.html" class="btn-cart">Carrito</a>
+      </nav>
+    </div>
+  </header>
 
-    <nav class="nav">
-      <a href="index.html#colecciones">Colecciones</a>
-      <a href="index.html#destacados">Destacados</a>
-      <a href="index.html#tsf">La comunidad</a>
-      <a href="cart.html" class="btn-cart">Carrito (0)</a>
-    </nav>
+  <main class="section">
+    <h1>Tu carrito</h1>
 
-  </div>
-</header>
-
-<main class="section">
-  <h1 class="carrito-title">Tu carrito</h1>
-
-  <p id="cart-empty" class="cart-empty">
-    Aún no agregaste productos al carrito.
-  </p>
-
-  <div id="cart-wrapper" class="cart-wrapper" style="display:none;">
-
-    <table class="cart-table">
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th class="th-center">Cantidad</th>
-          <th class="th-right">Subtotal</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="cart-items"></tbody>
-    </table>
+    <ul id="cart-items" class="cart-items"></ul>
 
     <div class="cart-summary">
-      <p class="total">Total: <span id="cart-total">$0</span></p>
-
-      <div class="cart-actions">
-        <a href="index.html" class="btn-secondary">Seguir comprando</a>
-        <a href="checkout.html" class="btn-primary">Continuar al pago</a>
-      </div>
+      <p>Total USD: <span id="cart-total">0</span></p>
     </div>
 
-  </div>
-</main>
+    <!-- BOTONES DE PAGO -->
+    <div class="checkout-buttons">
 
-<footer class="tsf-footer">
-  <p>© <span id="year"></span> TRADING SIN FRONTERAS SHOP</p>
-</footer>
+      <!-- Pagar con Stripe -->
+      <button id="btn-stripe" class="btn-primary">
+        Pagar en USD (Stripe)
+      </button>
 
-<script src="script.js"></script>
+      <!-- Pagar con USDT -->
+      <button id="btn-usdt" class="btn-secondary">
+        Pagar con USDT (BEP20)
+      </button>
+
+      <!-- Pagar con Mercado Pago -->
+      <button id="btn-mp" class="btn-primary">
+        Pagar en ARS (Mercado Pago)
+      </button>
+
+    </div>
+  </main>
+
+  <footer class="tsf-footer">
+    <p>© 2025 TSF SHOP · Trading Sin Fronteras</p>
+  </footer>
+
+  <script src="script.js"></script>
+
+  <script>
+    /* ============================
+       CARGAR CARRITO EN LA PÁGINA
+    ============================ */
+
+    function loadCart() {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      const container = document.getElementById("cart-items");
+      const total = document.getElementById("cart-total");
+
+      container.innerHTML = "";
+
+      let sum = 0;
+
+      cart.forEach((item, i) => {
+        sum += item.price * item.qty;
+
+        const li = document.createElement("li");
+        li.classList.add("cart-item");
+
+        li.innerHTML = `
+          <div>
+            <strong>${item.name}</strong><br>
+            Cantidad: ${item.qty}<br>
+            Precio: USD ${item.price}
+          </div>
+        `;
+
+        container.appendChild(li);
+      });
+
+      total.textContent = sum.toFixed(2);
+    }
+
+    loadCart();
+
+    /* ============================
+       BOTÓN STRIPE
+    ============================ */
+    document.getElementById("btn-stripe").addEventListener("click", async () => {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+      const res = await fetch(`${API_BASE}/api/stripe-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: cart })
+      });
+
+      const data = await res.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Error al iniciar pago con Stripe");
+      }
+    });
+
+    /* ============================
+       BOTÓN USDT
+    ============================ */
+    document.getElementById("btn-usdt").addEventListener("click", () => {
+      alert(
+        "Para pagar con USDT (BEP20) envía el monto total a:\n\n" +
+        USDT_WALLET +
+        "\n\nLuego envía el comprobante por WhatsApp."
+      );
+    });
+
+    /* ============================
+       BOTÓN MERCADO PAGO
+    ============================ */
+    document.getElementById("btn-mp").addEventListener("click", async () => {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+      if (cart.length === 0) {
+        alert("El carrito está vacío");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/mp-checkout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: cart })
+        });
+
+        const data = await res.json();
+
+        if (data.init_point) {
+          window.location.href = data.init_point;
+        } else {
+          alert("Error creando orden en Mercado Pago");
+          console.log(data);
+        }
+      } catch (e) {
+        alert("Error conectando con Mercado Pago");
+        console.log(e);
+      }
+    });
+
+  </script>
 </body>
 </html>
