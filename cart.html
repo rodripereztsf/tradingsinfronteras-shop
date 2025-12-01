@@ -32,7 +32,6 @@
       <p>Total USD: <span id="cart-total">0.00</span></p>
     </div>
 
-    <!-- BOTONES DE PAGO -->
     <div class="checkout-buttons">
       <button id="btn-stripe" class="btn-primary">
         Pagar en USD (Stripe)
@@ -52,62 +51,41 @@
     <p>© 2025 TSF SHOP · Trading Sin Fronteras</p>
   </footer>
 
-  <!-- Script general de la tienda (API_BASE, USDT_WALLET, etc.) -->
+  <!-- Configuración general (API_BASE, USDT_WALLET, etc.) -->
   <script src="script.js"></script>
 
-  <!-- Lógica específica del carrito -->
+  <!-- Lógica del carrito -->
   <script>
-    // Detectamos automáticamente la clave del carrito en localStorage
-    // para no romper lo que ya estaba hecho.
-  // Detectamos automáticamente TODAS las posibles keys que pueden haber quedado guardadas.
-const POSSIBLE_CART_KEYS = [
-  "tsf_cart",
-  "cart",
-  "carrito",
-  "carritoTSF",
-  "carrito-productos",
-  "productos",
-  "shopping_cart",
-  "rodri_cart",
-  "tsfshop_cart"
-];
-
-let CART_KEY = null;
-
-function detectCartKey() {
-  for (const key of POSSIBLE_CART_KEYS) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        console.log("✔️ Carrito encontrado en localStorage key:", key);
-        CART_KEY = key;
-        return;
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-
-  // Si no encuentra nada, usa esta por defecto
-  console.log("⚠️ No se encontró ningún carrito, usando key por defecto.");
-  CART_KEY = "tsf_cart";
-}
-
+    // =======================================
+    // DETECCIÓN AUTOMÁTICA DE LA KEY DEL CARRITO
+    // =======================================
     let CART_KEY = null;
 
     function detectCartKey() {
-      for (const key of POSSIBLE_CART_KEYS) {
-        const raw = localStorage.getItem(key);
-        if (raw && raw !== "[]" && raw !== "null") {
-          CART_KEY = key;
-          return;
+      // Recorremos TODO localStorage y buscamos un array de objetos (tu carrito)
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+
+          const parsed = JSON.parse(raw);
+
+          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
+            // Encontramos un candidato razonable de carrito
+            console.log("Carrito detectado en localStorage key:", key);
+            CART_KEY = key;
+            return;
+          }
+        } catch (e) {
+          // No era JSON, seguimos
+          continue;
         }
       }
-      // Si no hay ninguna, usamos una por defecto
-      CART_KEY = POSSIBLE_CART_KEYS[0];
+
+      // Si no encontramos nada, usamos una por defecto
+      console.log("No se encontró carrito en localStorage. Usando key por defecto 'tsf_cart'.");
+      CART_KEY = "tsf_cart";
     }
 
     detectCartKey();
@@ -116,7 +94,8 @@ function detectCartKey() {
       const raw = localStorage.getItem(CART_KEY);
       if (!raw) return [];
       try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
       } catch (e) {
         console.error("Error parseando carrito:", e);
         return [];
@@ -127,9 +106,9 @@ function detectCartKey() {
       localStorage.setItem(CART_KEY, JSON.stringify(cart));
     }
 
-    // ============================
+    // =======================================
     // CARGAR CARRITO EN LA PÁGINA
-    // ============================
+    // =======================================
     function loadCart() {
       const cart = getCart();
       const container = document.getElementById("cart-items");
@@ -139,16 +118,19 @@ function detectCartKey() {
       let sum = 0;
 
       cart.forEach((item, index) => {
-        sum += item.price * item.qty;
+        const price = Number(item.price) || 0;
+        const qty = Number(item.qty || item.quantity || 1);
+
+        sum += price * qty;
 
         const li = document.createElement("li");
         li.classList.add("cart-item");
 
         li.innerHTML = `
           <div>
-            <strong>${item.name}</strong><br>
-            Cantidad: ${item.qty}<br>
-            Precio: USD ${item.price}
+            <strong>${item.name || item.titulo || "Producto"}</strong><br>
+            Cantidad: ${qty}<br>
+            Precio: USD ${price.toFixed(2)}
           </div>
           <button class="btn-secondary btn-remove" data-index="${index}">
             Eliminar
@@ -160,7 +142,7 @@ function detectCartKey() {
 
       totalEl.textContent = sum.toFixed(2);
 
-      // Asociar eventos a los botones "Eliminar"
+      // Botones "Eliminar"
       document.querySelectorAll(".btn-remove").forEach(btn => {
         btn.addEventListener("click", (e) => {
           const idx = Number(e.target.getAttribute("data-index"));
@@ -174,9 +156,9 @@ function detectCartKey() {
 
     loadCart();
 
-    // ============================
+    // =======================================
     // PAGO CON STRIPE (USD)
-    // ============================
+    // =======================================
     document.getElementById("btn-stripe").addEventListener("click", async () => {
       const cart = getCart();
       if (!cart.length) {
@@ -208,9 +190,9 @@ function detectCartKey() {
       }
     });
 
-    // ============================
+    // =======================================
     // PAGO CON USDT (BEP20)
-    // ============================
+    // =======================================
     document.getElementById("btn-usdt").addEventListener("click", () => {
       alert(
         "Para pagar con USDT (BEP20) enviá el monto total a:\n\n" +
@@ -219,9 +201,9 @@ function detectCartKey() {
       );
     });
 
-    // ============================
+    // =======================================
     // PAGO CON MERCADO PAGO (ARS)
-    // ============================
+    // =======================================
     document.getElementById("btn-mp").addEventListener("click", async () => {
       const cart = getCart();
       if (!cart.length) {
