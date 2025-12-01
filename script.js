@@ -1,19 +1,19 @@
-// ==========================
-// CONFIGURACIÓN GENERAL
-// ==========================
+// ================================
+// CONFIGURACIÓN GENERAL TSF SHOP
+// ================================
 
-// URL base del backend donde estarán los endpoints /api
-// Cuando tengas tu backend en Vercel, cambialo por algo como:
-// const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
-const API_BASE = "https://tradingsinfronteras-shop.vercel.app"; // <-- CAMBIAR CUANDO TOQUE
+// URL base del backend (Vercel) donde están los endpoints /api
+// *** Asegurate que sea EXACTAMENTE el dominio de tu proyecto en Vercel ***
+const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
-// Conversión ARS -> USD / USDT (ajustá el valor según tu criterio)
-// Ejemplo: 1 USD = 1000 ARS  =>  1 ARS = 1/1000 USD
-const USD_RATE = 1 / 1000;
-const USDT_RATE = USD_RATE;
+// Conversión ARS -> USD (ajustalo más adelante si querés)
+const USD_RATE = 1 / 1000; // Ejemplo: 1 USD = 1000 ARS
 
-// Wallet USDT (BEP20)
-const USDT_WALLET = "0xTUWALLETBEP20AQUI"; // <-- CAMBIAR POR TU WALLET REAL
+// Conversión USD -> USDT (por ahora 1:1)
+const USDT_RATE = 1;
+
+// Dirección de tu wallet USDT (BEP20)
+const USDT_WALLET = "ACA_PONES_TU_WALLET_BEP20_REAL";
 
 
 // ==========================
