@@ -8,7 +8,7 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const setCors = (res) => {
   res.setHeader(
     "Access-Control-Allow-Origin",
-    "https://rodripereztst.github.io" // tu tienda en GitHub Pages
+    "https://rodripereztsf.github.io" // dominio CORRECTO de tu tienda
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
@@ -19,6 +19,7 @@ const setCors = (res) => {
     "Content-Type"
   );
 };
+
 
 module.exports = async (req, res) => {
   setCors(res);
