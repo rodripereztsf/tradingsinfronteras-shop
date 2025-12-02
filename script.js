@@ -84,39 +84,47 @@ function addToCart(name, price) {
 // ===============================
 
 function renderCartPage() {
-  const listEl = document.getElementById("cart-items");
-  const totalEl = document.getElementById("cart-total");
+  const itemsContainer = document.getElementById("cart-items");
+  const totalSpan = document.getElementById("cart-total");
 
-  // Si estos elementos no existen, no estamos en cart.html
-  if (!listEl || !totalEl) return;
+  if (!itemsContainer || !totalSpan) return;
 
-  loadCartFromStorage();
-  listEl.innerHTML = "";
+  itemsContainer.innerHTML = "";
 
-  if (cart.length === 0) {
-    listEl.innerHTML =
-      "<p class='cart-empty'>Tu carrito está vacío. Volvé a la tienda para agregar productos.</p>";
-    totalEl.textContent = "0.00";
+  if (!cart || cart.length === 0) {
+    itemsContainer.innerHTML = '<p class="cart-empty">Tu carrito está vacío.</p>';
+    totalSpan.textContent = "0.00";
     return;
   }
 
+  let total = 0;
+
   cart.forEach((item, index) => {
-    const row = document.createElement("div");
-    row.className = "cart-item-card";
-    row.innerHTML = `
+    const itemTotal = (item.price || 0) * (item.quantity || 1);
+    total += itemTotal;
+
+    const div = document.createElement("div");
+    div.className = "cart-item";
+
+    div.innerHTML = `
       <div class="cart-item-info">
-        <h3>${item.name}</h3>
-        <p>Cantidad: ${item.qty}</p>
+        <h3 class="cart-item-name">${item.name}</h3>
+        <p class="cart-item-qty">Cantidad: <span>${item.quantity}</span></p>
       </div>
-      <div class="cart-item-price">
-        <span>USD ${(item.price / 100).toFixed(2)}</span>
-        <button class="link-remove" data-index="${index}">✕ Eliminar</button>
+      <div class="cart-item-meta">
+        <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
+        <button class="cart-item-remove" onclick="removeFromCart(${index})">
+          ✕ Eliminar
+        </button>
       </div>
     `;
-    listEl.appendChild(row);
+
+    itemsContainer.appendChild(div);
   });
 
-  totalEl.textContent = (getCartTotal() / 100).toFixed(2);
+  totalSpan.textContent = (total / 100).toFixed(2);
+}
+
 
   // Manejo de eliminar (delegación de eventos)
   listEl.addEventListener(
