@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin TSF SHOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* Unos retoques básicos para el panel */
+    .admin-wrapper {
+      max-width: 1100px;
+      margin: 80px auto;
+      padding: 24px;
+      background: #05060a;
+      border-radius: 16px;
+      border: 1px solid #222;
+    }
+
+    .admin-title {
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+    }
+
+    .admin-subtitle {
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-bottom: 24px;
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.3fr;
+      gap: 24px;
+    }
+
+    .admin-card {
+      background: #0b0d13;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #222;
+    }
+
+    .admin-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .admin-table th,
+    .admin-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #222;
+      text-align: left;
+    }
+
+    .admin-table th {
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .admin-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .admin-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid #444;
+      opacity: 0.9;
+    }
+
+    .admin-badge--active {
+      border-color: #2ecc71;
+      color: #2ecc71;
+    }
+
+    .admin-badge--inactive {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    .admin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .admin-form label {
+      font-weight: 600;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .admin-form input,
+    .admin-form textarea,
+    .admin-form select {
+      width: 100%;
+      background: #05060a;
+      border-radius: 8px;
+      border: 1px solid #333;
+      padding: 6px 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+
+    .admin-form textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .admin-form small {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    .admin-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 8px 18px;
+      border: 1px solid #f1c40f;
+      color: #f1c40f;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+
+    .admin-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .admin-login {
+      max-width: 400px;
+      margin: 120px auto;
+      text-align: center;
+      padding: 24px;
+      border-radius: 16px;
+      background: #05060a;
+      border: 1px solid #222;
+    }
+
+    .admin-login input {
+      width: 100%;
+      margin-top: 12px;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid #444;
+      background: #0b0d13;
+      color: #fff;
+      font-family: inherit;
+    }
+
+    .admin-login button {
+      width: 100%;
+    }
+
+    .admin-message {
+      font-size: 0.8rem;
+      margin-top: 8px;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 900px) {
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Panel se muestra solo si el login es correcto -->
+  <div id="admin-login" class="admin-login">
+    <h1>Admin TSF SHOP</h1>
+    <p>Acceso solo para administradores.</p>
+    <input id="admin-password" type="password" placeholder="Contraseña de admin">
+    <button class="admin-btn" onclick="handleAdminLogin()">Entrar</button>
+    <div id="admin-login-msg" class="admin-message"></div>
+  </div>
+
+  <div id="admin-panel" class="admin-wrapper" style="display:none;">
+    <h1 class="admin-title">Panel de productos – TSF SHOP</h1>
+    <p class="admin-subtitle">
+      Desde acá vas a poder gestionar los productos de la tienda.
+      Esta primera versión es <strong>solo lectura</strong> (lista lo que viene de la API).
+      En el siguiente paso conectamos el guardado (crear/editar/borrar).
+    </p>
+
+    <div class="admin-grid">
+      <!-- LISTADO -->
+      <section class="admin-card">
+        <h2>Productos actuales</h2>
+        <table class="admin-table" id="admin-products-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Precio</th>
+              <th>Tipo</th>
+              <th>Activo</th>
+            </tr>
+          </thead>
+          <tbody id="admin-products-tbody">
+            <tr>
+              <td colspan="4">Cargando productos...</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- FORMULARIO NUEVO PRODUCTO (todavía sin guardar en backend) -->
+      <section class="admin-card">
+        <h2>Crear nuevo producto</h2>
+        <form class="admin-form" onsubmit="handleCreateProduct(event)">
+          <div>
+            <label for="p-name">Nombre</label>
+            <input id="p-name" required>
+          </div>
+
+          <div>
+            <label for="p-price">Precio (USD)</label>
+            <input id="p-price" type="number" step="0.01" min="0" required>
+            <small>Ejemplo: 49.9 → se guarda como 4990 centavos.</small>
+          </div>
+
+          <div>
+            <label for="p-type">Tipo de producto</label>
+            <select id="p-type">
+              <option value="course">Formación / Curso</option>
+              <option value="indicator">Indicador TradingView</option>
+              <option value="bot">Bot / Robot</option>
+              <option value="physical">Producto físico</option>
+              <option value="other">Otro</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="p-desc">Descripción corta</label>
+            <textarea id="p-desc" rows="3"></textarea>
+          </div>
+
+          <div>
+            <label for="p-img">URL de imagen</label>
+            <input id="p-img" placeholder="https://...">
+          </div>
+
+          <div>
+            <label for="p-active">Activo</label>
+            <select id="p-active">
+              <option value="true">Sí, mostrar en la tienda</option>
+              <option value="false">No, dejar oculto</option>
+            </select>
+          </div>
+
+          <button class="admin-btn" type="submit">
+            Crear producto (borrador)
+          </button>
+
+          <small id="admin-form-msg" class="admin-message">
+            Por ahora esto genera un borrador en memoria. En el próximo paso lo conectamos al backend para guardarlo de verdad.
+          </small>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_PASSWORD = "tsfadmin2025"; // cámbiala por la que vos quieras
+
+    function handleAdminLogin() {
+      const input = document.getElementById("admin-password");
+      const msg = document.getElementById("admin-login-msg");
+
+      if (input.value === ADMIN_PASSWORD) {
+        document.getElementById("admin-login").style.display = "none";
+        document.getElementById("admin-panel").style.display = "block";
+        loadAdminProducts();
+      } else {
+        msg.textContent = "Contraseña incorrecta.";
+        input.value = "";
+        input.focus();
+      }
+    }
+
+    async function loadAdminProducts() {
+      const tbody = document.getElementById("a
