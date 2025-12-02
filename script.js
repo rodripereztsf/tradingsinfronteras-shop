@@ -124,46 +124,48 @@ function renderCartPage() {
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 async function payWithStripe() {
-  if (!cart || cart.length === 0) {
+  if (!cart.length) {
     alert("Tu carrito está vacío.");
-    return;
-  }
-
-  if (API_BASE.includes("TU_DOMINIO")) {
-    alert(
-      "Configura API_BASE en script.js con el dominio de tu backend (Vercel) antes de usar Stripe."
-    );
     return;
   }
 
   try {
     const successUrl =
       window.location.origin + "/checkout-success-stripe.html";
-    const cancelUrl = window.location.href;
+    const cancelUrl = window.location.origin + "/cart.html";
 
     const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        items: cart,
+        // 👇 VOLVEMOS AL FORMATO CLÁSICO: name, price, qty
+        items: cart.map((item) => ({
+          name: item.name,
+          price: item.price,  // en centavos, ej: 14990 = 149.90
+          qty: item.qty,
+        })),
         successUrl,
         cancelUrl,
       }),
     });
 
     const data = await response.json();
+    console.log("Stripe response:", data);
 
     if (data && data.url) {
       window.location.href = data.url;
     } else {
+      console.error("Respuesta Stripe inesperada:", data);
       alert("No se pudo crear el pago con Stripe.");
-      console.error("Respuesta Stripe:", data);
     }
   } catch (e) {
-    console.error(e);
+    console.error("Error al conectar con Stripe:", e);
     alert("Error al conectar con Stripe.");
   }
 }
+
 
 // ===============================
 // INICIALIZACIÓN
