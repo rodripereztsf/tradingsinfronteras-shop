@@ -12,24 +12,24 @@
 
 <body>
   <header class="tsf-header">
-  <div class="tsf-header-inner">
+    <div class="tsf-header-inner">
 
-    <a href="index.html" class="logo-link">
-      <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" class="logo-img">
-      <div class="logo-text">
-        <span class="logo-title">TRADING SIN FRONTERAS</span>
-        <span class="logo-subtitle">SHOP</span>
-      </div>
-    </a>
+      <a href="index.html" class="logo-link">
+        <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" class="logo-img">
+        <div class="logo-text">
+          <span class="logo-title">TRADING SIN FRONTERAS</span>
+          <span class="logo-subtitle">SHOP</span>
+        </div>
+      </a>
 
-    <nav class="nav">
-      <a href="#colecciones">Colecciones</a>
-      <a href="#destacados">Destacados</a>
-      <a href="#tsf">La comunidad</a>
-      <a href="cart.html" class="btn-cart">Carrito (0)</a>
-    </nav>
-  </div>
-</header>
+      <nav class="nav">
+        <a href="#colecciones">Colecciones</a>
+        <a href="#destacados">Destacados</a>
+        <a href="#tsf">La comunidad</a>
+        <a href="cart.html" class="btn-cart">Carrito (0)</a>
+      </nav>
+    </div>
+  </header>
 
   <main>
     <section class="hero">
@@ -61,72 +61,20 @@
         </article>
       </div>
     </section>
-        <!-- PRODUCTOS DESTACADOS -->
+
+    <!-- PRODUCTOS DESTACADOS (DINÁMICOS) -->
     <section id="destacados" class="section">
       <h2>Productos destacados</h2>
-      <div class="grid-productos">
-
-        <article class="producto">
-                  <h3>
-            <a href="product.html">Remera Oficial TRADING SIN FRONTERAS</a>
-          </h3>
-          <p class="precio">$19.990</p>
-          <p class="producto-texto">
-            Remera negra premium con el logo oficial y frase para traders sin excusas.
-          </p>
-          <button
-            class="btn-secondary"
-            onclick="addToCart('Remera Oficial TRADING SIN FRONTERAS', 19990)">
-            Agregar al carrito
-          </button>
-        </article>
-
-        <article class="producto">
-          <h3>Diario de Trading · Edición TSF</h3>
-          <p class="precio">$14.990</p>
-          <p class="producto-texto">
-            Cuaderno diseñado para registrar entradas, salidas, gestión y emociones.
-          </p>
-          <button
-            class="btn-secondary"
-            onclick="addToCart('Diario de Trading · Edición TSF', 14990)">
-            Agregar al carrito
-          </button>
-        </article>
-
-        <article class="producto">
-          <h3>Mate TSF · Aperturas Londres & NY</h3>
-          <p class="precio">$12.990</p>
-          <p class="producto-texto">
-            Equipo de mate personalizado para acompañar tus sesiones de trading.
-          </p>
-          <button
-            class="btn-secondary"
-            onclick="addToCart('Mate TSF · Aperturas', 12990)">
-            Agregar al carrito
-          </button>
-        </article>
-       
-        <article class="producto">
-          <h3>Producto TEST Mercado Pago</h3>
-          <p class="precio">$500</p>
-          <p class="producto-texto">
-            Producto de prueba para validar pagos en ARS. No se envía mercadería real.
-          </p>
-          <button
-            class="btn-secondary"
-            onclick="addToCart('Producto TEST Mercado Pago', 500)">
-            Agregar al carrito (TEST)
-          </button>
-        </article>
-
+      <!-- Contenedor que se rellena desde script.js con la API de Vercel -->
+      <div id="products-grid" class="grid-productos">
+        <!-- Los productos se cargan dinámicamente -->
       </div>
     </section>
 
   </main>
 
   <footer class="tsf-footer">
-  <p>© <span id="year"></span> TRADING SIN FRONTERAS SHOP</p>
+    <p>© <span id="year"></span> TRADING SIN FRONTERAS SHOP</p>
   </footer>
 
   <script src="script.js"></script>
