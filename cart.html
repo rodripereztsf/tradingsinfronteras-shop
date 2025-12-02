@@ -1,407 +1,61 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Carrito · TSF SHOP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Tu carrito - TRADING SIN FRONTERAS SHOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Estilos específicos del carrito para organizar mejor la vista -->
-  <style>
-    .cart-items {
-      list-style: none;
-      padding-left: 0;
-      margin-top: 20px;
-      max-width: 800px;
-    }
-
-    .cart-item {
-      margin-bottom: 12px;
-    }
-
-    .cart-item-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-      padding: 12px 16px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    .cart-item-info {
-      flex: 1;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-
-    .cart-item-name {
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .cart-item-meta {
-      opacity: 0.85;
-    }
-
-    .cart-item-right {
-      text-align: right;
-      min-width: 130px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
-    }
-
-    .cart-item-price {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .cart-item-remove {
-      border: none;
-      background: transparent;
-      color: #ff6b6b;
-      cursor: pointer;
-      font-size: 13px;
-      padding: 0;
-    }
-
-    .cart-item-remove:hover {
-      text-decoration: underline;
-    }
-
-    .cart-summary {
-      margin-top: 20px;
-      margin-bottom: 24px;
-      font-weight: 600;
-      font-size: 16px;
-    }
-
-    .checkout-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    /* Un poquito de ajuste para el logo con imagen */
-    .logo-with-img {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-with-img img {
-      height: 32px;
-      width: 32px;
-      object-fit: contain;
-      border-radius: 50%;
-    }
-
-    .logo-text-block {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.1;
-    }
-
-    .logo-text-main {
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .logo-text-sub {
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    @media (max-width: 600px) {
-      .cart-item-row {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .cart-item-right {
-        align-items: flex-start;
-      }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <!-- HEADER: aquí podés dejar igual al de index.html.
-       Si querés que sea EXACTAMENTE igual, copiá el <header> de index.html y pegalo acá. -->
+  <!-- HEADER IGUAL AL DE INDEX -->
   <header class="tsf-header">
     <div class="tsf-header-inner">
-      <div class="logo logo-with-img">
-        <!-- Usá la misma imagen/logo que en las otras páginas -->
-        <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" />
-        <div class="logo-text-block">
-          <span class="logo-text-main">TRADING SIN FRONTERAS</span>
-          <span class="logo-text-sub">SHOP</span>
+      <a href="index.html" class="logo-link">
+        <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" class="logo-img">
+        <div class="logo-text">
+          <span class="logo-title">TRADING SIN FRONTERAS</span>
+          <span class="logo-subtitle">SHOP</span>
         </div>
-      </div>
+      </a>
+
       <nav class="nav">
-        <a href="index.html">Inicio</a>
         <a href="index.html#colecciones">Colecciones</a>
         <a href="index.html#destacados">Destacados</a>
-        <a href="cart.html" class="btn-cart">Carrito</a>
+        <a href="index.html#tsf">La comunidad</a>
+        <a href="cart.html" class="btn-cart">Carrito (<span id="cart-count">0</span>)</a>
       </nav>
     </div>
   </header>
 
-  <main class="section">
-    <h1>Tu carrito</h1>
+  <main class="cart-page">
+    <h1 class="cart-title">Tu carrito</h1>
 
-    <ul id="cart-items" class="cart-items"></ul>
+    <!-- LISTA DE PRODUCTOS -->
+    <div id="cart-items"></div>
 
+    <!-- RESUMEN -->
     <div class="cart-summary">
-      Total USD: <span id="cart-total">0.00</span>
+      <span>Total USD:</span>
+      <span class="cart-summary-amount">
+        USD <span id="cart-total">0.00</span>
+      </span>
     </div>
 
-    <div class="checkout-buttons">
-      <button id="btn-stripe" class="btn-primary">
+    <!-- BOTÓN DE PAGO -->
+    <div class="cart-actions">
+      <button class="btn-primary cart-pay-btn" onclick="payWithStripe()">
         Pagar en USD (Stripe)
       </button>
-      
     </div>
   </main>
 
   <footer class="tsf-footer">
-    <p>© 2025 TSF SHOP · Trading Sin Fronteras</p>
+    <p>© <span id="year"></span> TRADING SIN FRONTERAS SHOP</p>
   </footer>
 
-  <!-- Configuración general: API_BASE, USDT_WALLET, etc. -->
   <script src="script.js"></script>
-
-  <!-- Lógica del carrito (misma que ya funciona, pero con layout mejorado) -->
-  <script>
-    // =======================================
-    // DETECCIÓN DE CARRITO EN LOCALSTORAGE
-    // =======================================
-    let CART_KEY = null;
-    let CART_WRAPPER_TYPE = "array"; // "array" o "object-items"
-    let ORIGINAL_WRAPPER_OBJECT = null;
-
-    function detectCartKey() {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
-
-          const parsed = JSON.parse(raw);
-
-          // 1) directamente es un array de productos
-          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
-            CART_KEY = key;
-            CART_WRAPPER_TYPE = "array";
-            ORIGINAL_WRAPPER_OBJECT = null;
-            console.log("Carrito detectado (array) en key:", key);
-            return;
-          }
-
-          // 2) objeto con propiedad "items" como array de productos
-          if (
-            parsed &&
-            typeof parsed === "object" &&
-            Array.isArray(parsed.items) &&
-            parsed.items.length > 0 &&
-            typeof parsed.items[0] === "object"
-          ) {
-            CART_KEY = key;
-            CART_WRAPPER_TYPE = "object-items";
-            ORIGINAL_WRAPPER_OBJECT = parsed;
-            console.log("Carrito detectado (object.items) en key:", key);
-            return;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-
-      console.log("No se encontró carrito en localStorage. Usando key por defecto 'tsf_cart'.");
-      CART_KEY = "tsf_cart";
-      CART_WRAPPER_TYPE = "array";
-      ORIGINAL_WRAPPER_OBJECT = null;
-    }
-
-    detectCartKey();
-
-    function getCart() {
-      const raw = localStorage.getItem(CART_KEY);
-      if (!raw) return [];
-      try {
-        const parsed = JSON.parse(raw);
-        if (CART_WRAPPER_TYPE === "array" && Array.isArray(parsed)) {
-          return parsed;
-        }
-        if (
-          CART_WRAPPER_TYPE === "object-items" &&
-          parsed &&
-          typeof parsed === "object" &&
-          Array.isArray(parsed.items)
-        ) {
-          return parsed.items;
-        }
-        return [];
-      } catch (e) {
-        console.error("Error parseando carrito:", e);
-        return [];
-      }
-    }
-
-    function saveCart(cartArray) {
-      if (CART_WRAPPER_TYPE === "array") {
-        localStorage.setItem(CART_KEY, JSON.stringify(cartArray));
-      } else if (CART_WRAPPER_TYPE === "object-items") {
-        const wrapper = ORIGINAL_WRAPPER_OBJECT || {};
-        wrapper.items = cartArray;
-        localStorage.setItem(CART_KEY, JSON.stringify(wrapper));
-      }
-    }
-
-    // =======================================
-    // CARGAR CARRITO EN LA PÁGINA (layout lindo)
-    // =======================================
-    function loadCart() {
-      const cart = getCart();
-      const container = document.getElementById("cart-items");
-      const totalEl = document.getElementById("cart-total");
-
-      container.innerHTML = "";
-      let sum = 0;
-
-      if (!cart.length) {
-        const li = document.createElement("li");
-        li.textContent = "Tu carrito está vacío.";
-        container.appendChild(li);
-      } else {
-        cart.forEach((item, index) => {
-          const price = Number(item.price || item.precio || 0);
-          const qty = Number(item.qty || item.quantity || item.cantidad || 1);
-
-          sum += price * qty;
-
-          const li = document.createElement("li");
-          li.classList.add("cart-item");
-
-          li.innerHTML = `
-            <div class="cart-item-row">
-              <div class="cart-item-info">
-                <div class="cart-item-name">
-                  ${item.name || item.titulo || item.nombre || "Producto"}
-                </div>
-                <div class="cart-item-meta">
-                  Cantidad: ${qty}
-                </div>
-              </div>
-              <div class="cart-item-right">
-                <div class="cart-item-price">USD ${(price * qty).toFixed(2)}</div>
-                <button class="cart-item-remove" data-index="${index}" title="Eliminar">
-                  ✕ Eliminar
-                </button>
-              </div>
-            </div>
-          `;
-
-          container.appendChild(li);
-        });
-
-        // Eventos de eliminar
-        document.querySelectorAll(".cart-item-remove").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            const idx = Number(e.target.getAttribute("data-index"));
-            const currentCart = getCart();
-            currentCart.splice(idx, 1);
-            saveCart(currentCart);
-            loadCart();
-          });
-        });
-      }
-
-      totalEl.textContent = sum.toFixed(2);
-    }
-
-    loadCart();
-
-    // =======================================
-    // PAGO CON STRIPE (USD)
-    // =======================================
-    document.getElementById("btn-stripe").addEventListener("click", async () => {
-      const cart = getCart();
-      if (!cart.length) {
-        alert("El carrito está vacío");
-        return;
-      }
-
-      try {
-        const successUrl = window.location.origin + "/checkout-success-stripe.html";
-        const cancelUrl = window.location.href;
-
-        const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: cart, successUrl, cancelUrl }),
-        });
-
-        const data = await response.json();
-
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          alert("No se pudo crear el pago con Stripe.");
-          console.log(data);
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Error al conectar con Stripe.");
-      }
-    });
-
-    // =======================================
-    // PAGO CON USDT (BEP20)
-    // =======================================
-    document.getElementById("btn-usdt").addEventListener("click", () => {
-      alert(
-        "Para pagar con USDT (BEP20) enviá el monto total a:\n\n" +
-        USDT_WALLET +
-        "\n\nLuego enviá el comprobante por WhatsApp o el canal que definamos."
-      );
-    });
-
-    // =======================================
-    // PAGO CON MERCADO PAGO (ARS)
-    // =======================================
-    document.getElementById("btn-mp").addEventListener("click", async () => {
-      const cart = getCart();
-      if (!cart.length) {
-        alert("El carrito está vacío");
-        return;
-      }
-
-      try {
-        const successUrl = window.location.origin + "/checkout-success-mp.html";
-        const cancelUrl = window.location.href;
-
-        const response = await fetch(`${API_BASE}/api/create-mp-preference`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: cart, successUrl, cancelUrl }),
-        });
-
-        const data = await response.json();
-
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          alert("No se pudo crear el pago con Mercado Pago.");
-          console.log(data);
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Error al conectar con Mercado Pago.");
-      }
-    });
-  </script>
 </body>
 </html>
