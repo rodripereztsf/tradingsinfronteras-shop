@@ -184,12 +184,6 @@ async function payWithStripe() {
   }
 }
 
-// (2) USDT BEP20: por ahora aviso manual
-function payWithUSDT() {
-  alert(
-    "Para pagar con USDT (BEP20) escribime por WhatsApp o Discord y te paso la wallet. " +
-      "Próximamente se automatiza este método."
-  );
 }
 
 // ===============================
