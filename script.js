@@ -140,14 +140,17 @@ async function payWithStripe() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        // 👇 VOLVEMOS AL FORMATO CLÁSICO: name, price, qty
+        // 👇 IMPORTANTE: el backend probablemente espera "quantity", no "qty"
         items: cart.map((item) => ({
           name: item.name,
-          price: item.price,  // en centavos, ej: 14990 = 149.90
-          qty: item.qty,
+          price: item.price,         // en centavos (14990 = 149.90 USD)
+          quantity: item.qty,        // <-- CAMBIADO de "qty" a "quantity"
         })),
+        // mando ambos nombres por si el backend usa alguno de estos
         successUrl,
         cancelUrl,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
       }),
     });
 
@@ -165,6 +168,7 @@ async function payWithStripe() {
     alert("Error al conectar con Stripe.");
   }
 }
+
 
 
 // ===============================
