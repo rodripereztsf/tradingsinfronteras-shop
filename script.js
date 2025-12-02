@@ -124,70 +124,48 @@ function renderCartPage() {
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 async function payWithStripe() {
-  if (!cart.length) {
+  const cart = loadCartFromStorage(); // o como se llame tu función
+
+  if (!cart || cart.length === 0) {
     alert("Tu carrito está vacío.");
     return;
   }
 
   try {
     const successUrl = window.location.origin + "/checkout-success-stripe.html";
-    const cancelUrl = window.location.origin + "/cart.html";
+    const cancelUrl = window.location.href;
 
-    const bodyPayload = {
-      items: cart.map((item) => ({
-        name: item.name,
-        price: item.price,      // 14990 = 149.90 USD
-        quantity: item.qty,     // cantidad
-      })),
-      successUrl,
-      cancelUrl,
-      // también estos por si el backend los usa con snake_case
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    };
+    const response = await fetch(
+      `${API_BASE}/api/create-stripe-checkout`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            // mandamos TODO por las dudas
+            name: item.name,
+            price: item.price,
+            qty: item.qty,          // 👈 importante
+            quantity: item.qty,     // 👈 también lo mando con este nombre
+          })),
+          successUrl,
+          cancelUrl,
+        }),
+      }
+    );
 
-    console.log("[Stripe] Enviando payload a backend:", bodyPayload);
+    const data = await response.json();
 
-    const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bodyPayload),
-    });
+    console.log("Stripe response:", data);
 
-    const text = await response.text(); // primero como texto para ver TODO
-    console.log("[Stripe] Respuesta cruda del backend:", response.status, text);
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("[Stripe] No se pudo parsear JSON:", e);
-      alert("El servidor de pagos devolvió una respuesta inválida.");
-      return;
-    }
-
-    // Si el backend devolvió error explícito, lo mostramos
-    if (!response.ok || data.error) {
-      const msg =
-        data.error ||
-        data.message ||
-        `Error HTTP ${response.status}: ${response.statusText}`;
-      console.error("[Stripe] Error recibido del backend:", msg);
-      alert("Error al crear el pago con Stripe: " + msg);
-      return;
-    }
-
-    if (data && data.url) {
+    if (data?.url) {
       window.location.href = data.url;
     } else {
-      console.error("[Stripe] Respuesta sin 'url':", data);
-      alert(
-        "No se pudo crear el pago con Stripe. Respuesta inesperada: " +
-          JSON.stringify(data)
-      );
+      console.error("Respuesta Stripe inesperada:", data);
+      alert("No se pudo crear el pago con Stripe.");
     }
   } catch (e) {
-    console.error("[Stripe] Error al conectar con el backend:", e);
+    console.error(e);
     alert("Error al conectar con Stripe.");
   }
 }
