@@ -11,13 +11,14 @@ const setCors = (res) => {
   );
 };
 
+// helper para Upstash Redis
 let redisPromise = null;
 async function getRedis() {
   if (!redisPromise) {
     redisPromise = import("@upstash/redis").then(({ Redis }) => {
       return new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
       });
     });
   }
@@ -38,13 +39,16 @@ module.exports = async (req, res) => {
     return res.end();
   }
 
+  // token simple por header
   const token =
     req.headers["x-admin-token"] || req.headers["x-admin-token".toLowerCase()];
   if (!token || token !== ADMIN_TOKEN) {
     return unauthorized(res);
   }
 
-  // GET -> lista TODOS los productos (activos e inactivos)
+  // ------------------
+  // GET → lista TODOS los productos (activos e inactivos)
+  // ------------------
   if (req.method === "GET") {
     try {
       const redis = await getRedis();
@@ -62,7 +66,9 @@ module.exports = async (req, res) => {
     }
   }
 
-  // POST -> crear nuevo producto
+  // ------------------
+  // POST → crea un nuevo producto
+  // ------------------
   if (req.method === "POST") {
     let body = "";
     req.on("data", (chunk) => (body += chunk.toString()));
@@ -70,6 +76,7 @@ module.exports = async (req, res) => {
       try {
         const data = JSON.parse(body || "{}");
 
+        // generar id si no viene
         const id =
           data.id ||
           (data.name || "producto")
@@ -91,7 +98,7 @@ module.exports = async (req, res) => {
           image_url: data.image_url || "",
           is_active: Boolean(data.is_active),
           delivery_type: data.delivery_type || "none",
-          delivery_value: data.delivery_value || ""
+          delivery_value: data.delivery_value || "",
         };
 
         const redis = await getRedis();
@@ -114,6 +121,7 @@ module.exports = async (req, res) => {
     return;
   }
 
+  // Otros métodos no permitidos
   res.statusCode = 405;
   res.setHeader("Content-Type", "application/json");
   return res.end(JSON.stringify({ error: "Method not allowed" }));
