@@ -4,6 +4,12 @@
 
 let cart = [];
 
+// Formatear precio desde centavos
+function formatUsdFromCents(cents) {
+  const n = Number(cents || 0) / 100;
+  return `USD ${n.toFixed(2)}`;
+}
+
 // Cargar carrito desde localStorage
 function loadCartFromStorage() {
   try {
@@ -119,6 +125,66 @@ function renderCartPage() {
 }
 
 // ===============================
+// RENDER DE PRODUCTOS (index.html)
+// ===============================
+
+async function renderProductsOnHome() {
+  const container = document.getElementById("products-grid");
+  if (!container) return; // si no estamos en index, no hace nada
+
+  container.innerHTML = "<p>Cargando productos...</p>";
+
+  try {
+    const response = await fetch(
+      "https://tradingsinfronteras-shop.vercel.app/api/products"
+    );
+    const data = await response.json();
+
+    if (!data || !Array.isArray(data.products)) {
+      throw new Error("Respuesta inválida de /api/products");
+    }
+
+    const products = data.products;
+
+    if (!products.length) {
+      container.innerHTML = "<p>No hay productos disponibles.</p>";
+      return;
+    }
+
+    container.innerHTML = ""; // limpiamos el "Cargando..."
+
+    products.forEach((product) => {
+      const card = document.createElement("article");
+      card.className = "producto"; // usa tu clase existente para mantener estilos
+
+      card.innerHTML = `
+        <h3>
+          ${product.name}
+        </h3>
+        <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
+        <p class="producto-texto">
+          ${product.short_description || ""}
+        </p>
+        <button
+          class="btn-secondary"
+          onclick="addToCart('${product.name.replace(
+            /'/g,
+            "\\'"
+          )}', ${product.price_cents})">
+          Agregar al carrito
+        </button>
+      `;
+
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Error cargando productos:", err);
+    container.innerHTML =
+      "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
+  }
+}
+
+// ===============================
 // STRIPE
 // ===============================
 
@@ -191,5 +257,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Cargar carrito y reflejar estado
   loadCartFromStorage();
   updateCartBadge();
-  renderCartPage();
+  renderCartPage();       // si estamos en cart.html
+
+  // Renderizar productos dinámicamente en index.html
+  renderProductsOnHome(); // si estamos en index.html
 });
