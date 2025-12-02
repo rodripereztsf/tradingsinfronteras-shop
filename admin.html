@@ -298,4 +298,75 @@
     }
 
     async function loadAdminProducts() {
-      const tbody = document.getElementById("a
+      const tbody = document.getElementById("admin-products-tbody");
+      tbody.innerHTML = '<tr><td colspan="4">Cargando productos...</td></tr>';
+
+      try {
+        const res = await fetch("https://tradingsinfronteras-shop.vercel.app/api/products");
+        const data = await res.json();
+
+        if (!data || !Array.isArray(data.products)) {
+          throw new Error("Respuesta inválida");
+        }
+
+        const products = data.products;
+        if (!products.length) {
+          tbody.innerHTML = '<tr><td colspan="4">No hay productos.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = "";
+        products.forEach((p) => {
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${p.name}</td>
+            <td>USD ${(p.price_cents / 100).toFixed(2)}</td>
+            <td>${p.type || "-"}</td>
+            <td>
+              <span class="admin-badge ${p.is_active ? "admin-badge--active" : "admin-badge--inactive"}">
+                ${p.is_active ? "Activo" : "Oculto"}
+              </span>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="4">Error al cargar productos.</td></tr>';
+      }
+    }
+
+    function handleCreateProduct(event) {
+      event.preventDefault();
+
+      const name = document.getElementById("p-name").value.trim();
+      const priceUsd = parseFloat(document.getElementById("p-price").value || "0");
+      const type = document.getElementById("p-type").value;
+      const desc = document.getElementById("p-desc").value.trim();
+      const img = document.getElementById("p-img").value.trim();
+      const isActive = document.getElementById("p-active").value === "true";
+
+      const price_cents = Math.round(priceUsd * 100);
+
+      const draftProduct = {
+        name,
+        price_cents,
+        type,
+        short_description: desc,
+        image_url: img,
+        is_active: isActive,
+      };
+
+      console.log("BORRADOR DE PRODUCTO (todavía no guardado en backend):", draftProduct);
+
+      const msg = document.getElementById("admin-form-msg");
+      msg.textContent = "Borrador creado en consola. En el siguiente paso conectamos este formulario a la API para guardarlo en la base de datos.";
+
+      // Opcional: limpiar el formulario
+      // event.target.reset();
+    }
+  </script>
+</body>
+</html>
