@@ -14,6 +14,8 @@ function loadCartFromStorage() {
     console.error("Error cargando carrito desde localStorage:", e);
     cart = [];
   }
+  // 👉 devolvemos el carrito por si en algún lado lo querés usar
+  return cart;
 }
 
 // Guardar carrito en localStorage
@@ -122,9 +124,12 @@ function renderCartPage() {
 
 // Cambiá esto por el dominio de tu backend en Vercel si fuera distinto
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+// Si en algún momento lo querés hacer relativo, podrías usar:
+// const API_BASE = "";
 
 async function payWithStripe() {
-  const cart = loadCartFromStorage(); // o como se llame tu función
+  // Nos aseguramos de tener el carrito actualizado desde localStorage
+  loadCartFromStorage();
 
   if (!cart || cart.length === 0) {
     alert("Tu carrito está vacío.");
@@ -142,11 +147,10 @@ async function payWithStripe() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: cart.map((item) => ({
-            // mandamos TODO por las dudas
+            // mandamos info consistente con lo que realmente guardamos
             name: item.name,
-            price: item.price,
-            qty: item.qty,          // 👈 importante
-            quantity: item.qty,     // 👈 también lo mando con este nombre
+            price: item.price,                 // en centavos
+            quantity: item.quantity || 1,      // 👈 USAMOS quantity REAL
           })),
           successUrl,
           cancelUrl,
@@ -159,6 +163,9 @@ async function payWithStripe() {
     console.log("Stripe response:", data);
 
     if (data?.url) {
+      // si querés limpiar el carrito al iniciar el pago, podés descomentar:
+      // cart = [];
+      // saveCartToStorage();
       window.location.href = data.url;
     } else {
       console.error("Respuesta Stripe inesperada:", data);
@@ -169,8 +176,6 @@ async function payWithStripe() {
     alert("Error al conectar con Stripe.");
   }
 }
-
-
 
 // ===============================
 // INICIALIZACIÓN
