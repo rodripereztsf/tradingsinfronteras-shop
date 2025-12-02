@@ -185,7 +185,7 @@
   </style>
 </head>
 <body>
-  <!-- Panel se muestra solo si el login es correcto -->
+  <!-- Login -->
   <div id="admin-login" class="admin-login">
     <h1>Admin TSF SHOP</h1>
     <p>Acceso solo para administradores.</p>
@@ -194,12 +194,12 @@
     <div id="admin-login-msg" class="admin-message"></div>
   </div>
 
+  <!-- Panel -->
   <div id="admin-panel" class="admin-wrapper" style="display:none;">
     <h1 class="admin-title">Panel de productos – TSF SHOP</h1>
     <p class="admin-subtitle">
-      Desde acá vas a poder gestionar los productos de la tienda.
-      Esta primera versión es <strong>solo lectura</strong> (lista lo que viene de la API).
-      En el siguiente paso conectamos el guardado (crear/editar/borrar).
+      Desde acá vas a poder gestionar los productos de la tienda:
+      crearlos, dejarlos activos/inactivos y verlos en tiempo real.
     </p>
 
     <div class="admin-grid">
@@ -223,7 +223,7 @@
         </table>
       </section>
 
-      <!-- FORMULARIO NUEVO PRODUCTO (todavía sin guardar en backend) -->
+      <!-- FORMULARIO NUEVO PRODUCTO -->
       <section class="admin-card">
         <h2>Crear nuevo producto</h2>
         <form class="admin-form" onsubmit="handleCreateProduct(event)">
@@ -268,11 +268,12 @@
           </div>
 
           <button class="admin-btn" type="submit">
-            Crear producto (borrador)
+            Guardar producto
           </button>
 
           <small id="admin-form-msg" class="admin-message">
-            Por ahora esto genera un borrador en memoria. En el próximo paso lo conectamos al backend para guardarlo de verdad.
+            Al guardar, el producto se almacena en la base de datos (Redis) y,
+            si está activo, aparece en la tienda.
           </small>
         </form>
       </section>
@@ -280,7 +281,9 @@
   </div>
 
   <script>
-    const ADMIN_PASSWORD = "tsfadmin2025"; // cámbiala por la que vos quieras
+    const ADMIN_PASSWORD = "tsfadmin2025";   // contraseña de acceso al panel
+    const ADMIN_TOKEN = "tsfadmin2025";      // debe coincidir con ADMIN_TOKEN del backend
+    const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
     function handleAdminLogin() {
       const input = document.getElementById("admin-password");
@@ -302,7 +305,11 @@
       tbody.innerHTML = '<tr><td colspan="4">Cargando productos...</td></tr>';
 
       try {
-        const res = await fetch("https://tradingsinfronteras-shop.vercel.app/api/products");
+        const res = await fetch(`${API_BASE}/api/admin-products`, {
+          headers: {
+            "x-admin-token": ADMIN_TOKEN,
+          },
+        });
         const data = await res.json();
 
         if (!data || !Array.isArray(data.products)) {
@@ -333,7 +340,7 @@
           tbody.appendChild(tr);
         });
       } catch (err) {
-        console.error(err);
+        console.error("Error cargando productos en admin:", err);
         tbody.innerHTML = '<tr><td colspan="4">Error al cargar productos.</td></tr>';
       }
     }
@@ -350,7 +357,7 @@
 
       const price_cents = Math.round(priceUsd * 100);
 
-      const draftProduct = {
+      const payload = {
         name,
         price_cents,
         type,
@@ -359,13 +366,34 @@
         is_active: isActive,
       };
 
-      console.log("BORRADOR DE PRODUCTO (todavía no guardado en backend):", draftProduct);
-
       const msg = document.getElementById("admin-form-msg");
-      msg.textContent = "Borrador creado en consola. En el siguiente paso conectamos este formulario a la API para guardarlo en la base de datos.";
+      msg.textContent = "Guardando producto...";
 
-      // Opcional: limpiar el formulario
-      // event.target.reset();
+      fetch(`${API_BASE}/api/admin-products`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": ADMIN_TOKEN,
+        },
+        body: JSON.stringify(payload),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data || !data.ok) {
+            console.error("Error al crear producto:", data);
+            msg.textContent = "Error al crear producto.";
+            return;
+          }
+
+          msg.textContent = "Producto creado correctamente.";
+          loadAdminProducts();
+          // opcional: limpiar el formulario
+          // event.target.reset();
+        })
+        .catch((err) => {
+          console.error("Error fetch crear producto:", err);
+          msg.textContent = "Error de conexión al guardar.";
+        });
     }
   </script>
 </body>
