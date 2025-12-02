@@ -130,41 +130,64 @@ async function payWithStripe() {
   }
 
   try {
-    const successUrl =
-      window.location.origin + "/checkout-success-stripe.html";
+    const successUrl = window.location.origin + "/checkout-success-stripe.html";
     const cancelUrl = window.location.origin + "/cart.html";
+
+    const bodyPayload = {
+      items: cart.map((item) => ({
+        name: item.name,
+        price: item.price,      // 14990 = 149.90 USD
+        quantity: item.qty,     // cantidad
+      })),
+      successUrl,
+      cancelUrl,
+      // también estos por si el backend los usa con snake_case
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    };
+
+    console.log("[Stripe] Enviando payload a backend:", bodyPayload);
 
     const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        // 👇 IMPORTANTE: el backend probablemente espera "quantity", no "qty"
-        items: cart.map((item) => ({
-          name: item.name,
-          price: item.price,         // en centavos (14990 = 149.90 USD)
-          quantity: item.qty,        // <-- CAMBIADO de "qty" a "quantity"
-        })),
-        // mando ambos nombres por si el backend usa alguno de estos
-        successUrl,
-        cancelUrl,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyPayload),
     });
 
-    const data = await response.json();
-    console.log("Stripe response:", data);
+    const text = await response.text(); // primero como texto para ver TODO
+    console.log("[Stripe] Respuesta cruda del backend:", response.status, text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("[Stripe] No se pudo parsear JSON:", e);
+      alert("El servidor de pagos devolvió una respuesta inválida.");
+      return;
+    }
+
+    // Si el backend devolvió error explícito, lo mostramos
+    if (!response.ok || data.error) {
+      const msg =
+        data.error ||
+        data.message ||
+        `Error HTTP ${response.status}: ${response.statusText}`;
+      console.error("[Stripe] Error recibido del backend:", msg);
+      alert("Error al crear el pago con Stripe: " + msg);
+      return;
+    }
 
     if (data && data.url) {
       window.location.href = data.url;
     } else {
-      console.error("Respuesta Stripe inesperada:", data);
-      alert("No se pudo crear el pago con Stripe.");
+      console.error("[Stripe] Respuesta sin 'url':", data);
+      alert(
+        "No se pudo crear el pago con Stripe. Respuesta inesperada: " +
+          JSON.stringify(data)
+      );
     }
   } catch (e) {
-    console.error("Error al conectar con Stripe:", e);
+    console.error("[Stripe] Error al conectar con el backend:", e);
     alert("Error al conectar con Stripe.");
   }
 }
