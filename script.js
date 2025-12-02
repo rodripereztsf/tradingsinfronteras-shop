@@ -1,279 +1,214 @@
-// ================================
-// CONFIGURACIÓN GENERAL TSF SHOP
-// ================================
+// ===============================
+// CONFIGURACIÓN GENERAL
+// ===============================
 
-// URL base del backend (Vercel) donde están los endpoints /api
-// *** Asegurate que sea EXACTAMENTE el dominio de tu proyecto en Vercel ***
+// URL base de tu backend en Vercel (ajustá si cambias el dominio)
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
-// Conversión ARS -> USD (ajustalo más adelante si querés)
-const USD_RATE = 1 / 1000; // Ejemplo: 1 USD = 1000 ARS
+// Clave CART en localStorage
+const CART_KEY = "tsf_cart";
 
-// Conversión USD -> USDT (por ahora 1:1)
-const USDT_RATE = 1;
-
-// Dirección de tu wallet USDT (BEP20)
-const USDT_WALLET = "ACA_PONES_TU_WALLET_BEP20_REAL";
-
-
-// ==========================
-// ESTADO DEL CARRITO
-// ==========================
-
+// Estado del carrito en memoria
 let cart = [];
+
+// ===============================
+// UTILIDADES DE CARRITO
+// ===============================
 
 function loadCartFromStorage() {
   try {
-    cart = JSON.parse(localStorage.getItem("tsfCart")) || [];
-  } catch {
+    const raw = localStorage.getItem(CART_KEY);
+    cart = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(cart)) cart = [];
+  } catch (e) {
+    console.error("Error cargando carrito:", e);
     cart = [];
   }
 }
 
 function saveCartToStorage() {
-  localStorage.setItem("tsfCart", JSON.stringify(cart));
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  } catch (e) {
+    console.error("Error guardando carrito:", e);
+  }
 }
+
+function getCartCount() {
+  return cart.reduce((sum, item) => sum + item.qty, 0);
+}
+
+function getCartTotal() {
+  // precios en CENTAVOS (19990 => 199.90)
+  return cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+}
+
+// ===============================
+// INTERFAZ: BOTÓN "CARRITO (N)"
+// ===============================
 
 function updateCartBadge() {
   const btn = document.querySelector(".btn-cart");
   if (!btn) return;
 
-  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  btn.textContent = `Carrito (${totalItems})`;
+  const count = getCartCount();
+  btn.textContent = `Carrito (${count})`;
 }
 
+// ===============================
+// AÑADIR AL CARRITO (desde index.html)
+// ===============================
+
 function addToCart(name, price) {
-  const numericPrice = Number(price) || 0;
-  const existing = cart.find((item) => item.name === name);
+  // price viene en centavos (ej: 19990)
+  loadCartFromStorage();
+
+  const existing = cart.find(
+    (item) => item.name === name && item.price === price
+  );
 
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ name, price: numericPrice, qty: 1 });
+    cart.push({ name, price, qty: 1 });
   }
 
   saveCartToStorage();
   updateCartBadge();
-  renderCartPage();
-  renderCheckoutPage();
-  renderPaymentAmounts();
-  alert(`Se agregó al carrito: ${name}`);
+
+  alert("Producto agregado al carrito.");
 }
 
-function removeFromCart(index) {
-  cart.splice(index, 1);
-  saveCartToStorage();
-  updateCartBadge();
-  renderCartPage();
-  renderCheckoutPage();
-  renderPaymentAmounts();
-}
-
-
-// ==========================
-// UTILIDADES
-// ==========================
-
-function getCartTotal() {
-  return cart.reduce((sum, item) => sum + item.qty * item.price, 0);
-}
-
-function formatARS(value) {
-  return `$${value.toLocaleString("es-AR")}`;
-}
-
-
-// ==========================
-// RENDER: CARRITO (cart.html)
-// ==========================
+// ===============================
+// PINTAR CARRITO EN cart.html
+// ===============================
 
 function renderCartPage() {
-  const tbody = document.getElementById("cart-items");
-  const totalSpan = document.getElementById("cart-total");
-  const wrapper = document.getElementById("cart-wrapper");
-  const emptyMsg = document.getElementById("cart-empty");
+  const listEl = document.getElementById("cart-items");
+  const totalEl = document.getElementById("cart-total");
 
-  // Si no estamos en cart.html, salimos
-  if (!tbody || !totalSpan || !wrapper || !emptyMsg) return;
+  // Si estos elementos no existen, no estamos en cart.html
+  if (!listEl || !totalEl) return;
+
+  loadCartFromStorage();
+  listEl.innerHTML = "";
 
   if (cart.length === 0) {
-    wrapper.style.display = "none";
-    emptyMsg.style.display = "block";
-    totalSpan.textContent = formatARS(0);
+    listEl.innerHTML =
+      "<p class='cart-empty'>Tu carrito está vacío. Volvé a la tienda para agregar productos.</p>";
+    totalEl.textContent = "0.00";
     return;
   }
-
-  wrapper.style.display = "block";
-  emptyMsg.style.display = "none";
-  tbody.innerHTML = "";
-
-  let total = 0;
 
   cart.forEach((item, index) => {
-    const subtotal = item.price * item.qty;
-    total += subtotal;
-
-    const row = document.createElement("tr");
+    const row = document.createElement("div");
+    row.className = "cart-item-card";
     row.innerHTML = `
-      <td>${item.name}</td>
-      <td class="th-center">${item.qty}</td>
-      <td class="th-right">${formatARS(subtotal)}</td>
-      <td>
-        <button class="btn-remove" onclick="removeFromCart(${index})">X</button>
-      </td>
+      <div class="cart-item-info">
+        <h3>${item.name}</h3>
+        <p>Cantidad: ${item.qty}</p>
+      </div>
+      <div class="cart-item-price">
+        <span>USD ${(item.price / 100).toFixed(2)}</span>
+        <button class="link-remove" data-index="${index}">✕ Eliminar</button>
+      </div>
     `;
-
-    tbody.appendChild(row);
+    listEl.appendChild(row);
   });
 
-  totalSpan.textContent = formatARS(total);
+  totalEl.textContent = (getCartTotal() / 100).toFixed(2);
+
+  // Manejo de eliminar (delegación de eventos)
+  listEl.addEventListener(
+    "click",
+    (e) => {
+      const btn = e.target.closest("[data-index]");
+      if (!btn) return;
+
+      const idx = Number(btn.dataset.index);
+      if (Number.isNaN(idx)) return;
+
+      cart.splice(idx, 1);
+      saveCartToStorage();
+      renderCartPage();
+      updateCartBadge();
+    },
+    { once: true }
+  );
 }
 
+// ===============================
+// PAGOS
+// ===============================
 
-// ==========================
-// RENDER: CHECKOUT (checkout.html)
-// ==========================
+// (1) Stripe: pago con tarjeta
+async function payWithStripe() {
+  loadCartFromStorage();
 
-function renderCheckoutPage() {
-  const list = document.getElementById("checkout-items");
-  const totalSpan = document.getElementById("checkout-total");
-
-  // Si no estamos en checkout.html, salimos
-  if (!list || !totalSpan) return;
-
-  if (cart.length === 0) {
-    list.innerHTML = "<li>No hay productos en el pedido.</li>";
-    totalSpan.textContent = formatARS(0);
+  if (!cart.length) {
+    alert("Tu carrito está vacío.");
     return;
   }
 
-  list.innerHTML = "";
-  let total = 0;
-
-  cart.forEach((item) => {
-    const subtotal = item.price * item.qty;
-    total += subtotal;
-
-    const li = document.createElement("li");
-    li.textContent = `${item.qty} × ${item.name} — ${formatARS(subtotal)}`;
-    list.appendChild(li);
-  });
-
-  totalSpan.textContent = formatARS(total);
-}
-
-
-// ==========================
-// RENDER: MONTOS DE PAGO (ARS / USD / USDT)
-// ==========================
-
-function renderPaymentAmounts() {
-  const arsElem = document.getElementById("ars-amount");
-  const usdElem = document.getElementById("usd-amount");
-  const usdtElem = document.getElementById("usdt-amount");
-
-  // Si no estamos en checkout.html (o falta el bloque), salimos
-  if (!arsElem || !usdElem || !usdtElem) return;
-
-  const totalARS = getCartTotal();
-  const totalUSD = (totalARS * USD_RATE).toFixed(2);
-  const totalUSDT = (totalARS * USDT_RATE).toFixed(2);
-
-  arsElem.textContent = formatARS(totalARS);
-  usdElem.textContent = `${totalUSD} USD`;
-  usdtElem.textContent = `${totalUSDT} USDT`;
-}
-
-
-// ==========================
-// PAGOS
-// ==========================
-
-// (1) Stripe en USD – usa backend /api/create-stripe-checkout
-async function payWithStripe() {
-
   try {
-    const successUrl = window.location.origin + "/checkout-success-stripe.html";
+    const successUrl =
+      window.location.origin + "/checkout-success-stripe.html";
     const cancelUrl = window.location.href;
 
-    const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: cart,
-        successUrl,
-        cancelUrl,
-      }),
-    });
+    const response = await fetch(
+      `${API_BASE}/api/create-stripe-checkout`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart,
+          successUrl,
+          cancelUrl,
+        }),
+      }
+    );
 
     const data = await response.json();
 
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
+    if (!response.ok || !data.url) {
+      console.error("Stripe error:", data);
       alert("No se pudo crear el pago con Stripe.");
+      return;
     }
+
+    // Redirige al Checkout Hosted de Stripe
+    window.location.href = data.url;
   } catch (e) {
     console.error(e);
     alert("Error al conectar con Stripe.");
   }
 }
 
-// (2) Mercado Pago en ARS – usa backend /api/create-mp-preference
-async function payWithMP() {
-
-  try {
-    const successUrl = window.location.origin + "/checkout-success-mp.html";
-    const cancelUrl = window.location.href;
-
-    const response = await fetch(`${API_BASE}/api/create-mp-preference`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: cart,
-        successUrl,
-        cancelUrl,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert("No se pudo crear el pago con Mercado Pago.");
-    }
-  } catch (e) {
-    console.error(e);
-    alert("Error al conectar con Mercado Pago.");
-  }
-}
-
-// (3) USDT (BEP20) – sin backend, pago manual cripto
+// (2) USDT BEP20: por ahora aviso manual
 function payWithUSDT() {
-  const totalARS = getCartTotal();
-  const totalUSDT = (totalARS * USDT_RATE).toFixed(2);
-
   alert(
-    `Para completar el pago en USDT (BEP20):\n\n` +
-      `1) Enviá ${totalUSDT} USDT a esta wallet:\n` +
-      `${USDT_WALLET}\n\n` +
-      `2) Enviá el comprobante por el canal que definas (mail / soporte / etc.).`
+    "Para pagar con USDT (BEP20) escribime por WhatsApp o Discord y te paso la wallet. " +
+      "Próximamente se automatiza este método."
   );
 }
 
-
-// ==========================
+// ===============================
 // INICIALIZACIÓN GLOBAL
-// ==========================
+// ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Año en el footer
+  const yearEl = document.getElementById("year");
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
+  }
+
   loadCartFromStorage();
   updateCartBadge();
   renderCartPage();
-  renderCheckoutPage();
-  renderPaymentAmounts();
-
-  const year = document.getElementById("year");
-  if (year) year.textContent = new Date().getFullYear();
 });
+
+// Exponer funciones a window para usar en los onclick de HTML
+window.addToCart = addToCart;
+window.payWithStripe = payWithStripe;
+window.payWithUSDT = payWithUSDT;
