@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* Unos retoques básicos para el panel */
     .admin-wrapper {
       max-width: 1100px;
       margin: 80px auto;
@@ -18,58 +17,48 @@
       border-radius: 16px;
       border: 1px solid #222;
     }
-
     .admin-title {
       font-size: 1.8rem;
       margin-bottom: 16px;
     }
-
     .admin-subtitle {
       font-size: 0.9rem;
       opacity: 0.75;
       margin-bottom: 24px;
     }
-
     .admin-grid {
       display: grid;
       grid-template-columns: 2fr 1.3fr;
       gap: 24px;
     }
-
     .admin-card {
       background: #0b0d13;
       border-radius: 12px;
       padding: 16px;
       border: 1px solid #222;
     }
-
     .admin-card h2 {
       font-size: 1.1rem;
       margin-bottom: 12px;
     }
-
     .admin-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.85rem;
     }
-
     .admin-table th,
     .admin-table td {
       padding: 8px 6px;
       border-bottom: 1px solid #222;
       text-align: left;
     }
-
     .admin-table th {
       font-weight: 600;
       opacity: 0.9;
     }
-
     .admin-table tr:last-child td {
       border-bottom: none;
     }
-
     .admin-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -78,30 +67,25 @@
       border: 1px solid #444;
       opacity: 0.9;
     }
-
     .admin-badge--active {
       border-color: #2ecc71;
       color: #2ecc71;
     }
-
     .admin-badge--inactive {
       border-color: #e74c3c;
       color: #e74c3c;
     }
-
     .admin-form {
       display: flex;
       flex-direction: column;
       gap: 10px;
       font-size: 0.9rem;
     }
-
     .admin-form label {
       font-weight: 600;
       font-size: 0.8rem;
       opacity: 0.8;
     }
-
     .admin-form input,
     .admin-form textarea,
     .admin-form select {
@@ -114,17 +98,14 @@
       font-family: inherit;
       font-size: 0.85rem;
     }
-
     .admin-form textarea {
       resize: vertical;
       min-height: 60px;
     }
-
     .admin-form small {
       font-size: 0.7rem;
       opacity: 0.7;
     }
-
     .admin-btn {
       display: inline-flex;
       align-items: center;
@@ -139,12 +120,24 @@
       font-size: 0.85rem;
       margin-top: 6px;
     }
-
+    .admin-btn.secondary {
+      border-color: #888;
+      color: #ccc;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      margin-top: 0;
+    }
+    .admin-btn.danger {
+      border-color: #e74c3c;
+      color: #e74c3c;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      margin-top: 0;
+    }
     .admin-btn:disabled {
       opacity: 0.4;
       cursor: default;
     }
-
     .admin-login {
       max-width: 400px;
       margin: 120px auto;
@@ -154,7 +147,6 @@
       background: #05060a;
       border: 1px solid #222;
     }
-
     .admin-login input {
       width: 100%;
       margin-top: 12px;
@@ -166,17 +158,14 @@
       color: #fff;
       font-family: inherit;
     }
-
     .admin-login button {
       width: 100%;
     }
-
     .admin-message {
       font-size: 0.8rem;
       margin-top: 8px;
       opacity: 0.8;
     }
-
     @media (max-width: 900px) {
       .admin-grid {
         grid-template-columns: 1fr;
@@ -198,8 +187,7 @@
   <div id="admin-panel" class="admin-wrapper" style="display:none;">
     <h1 class="admin-title">Panel de productos – TSF SHOP</h1>
     <p class="admin-subtitle">
-      Desde acá vas a poder gestionar los productos de la tienda:
-      crearlos, dejarlos activos/inactivos y verlos en tiempo real.
+      Creá, edita y elimina productos. Los activos se muestran en la tienda.
     </p>
 
     <div class="admin-grid">
@@ -213,20 +201,23 @@
               <th>Precio</th>
               <th>Tipo</th>
               <th>Activo</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="admin-products-tbody">
             <tr>
-              <td colspan="4">Cargando productos...</td>
+              <td colspan="5">Cargando productos...</td>
             </tr>
           </tbody>
         </table>
       </section>
 
-      <!-- FORMULARIO NUEVO PRODUCTO -->
+      <!-- FORMULARIO -->
       <section class="admin-card">
-        <h2>Crear nuevo producto</h2>
-        <form class="admin-form" onsubmit="handleCreateProduct(event)">
+        <h2 id="admin-form-title">Crear nuevo producto</h2>
+        <form class="admin-form" onsubmit="handleSubmitProduct(event)">
+          <input id="p-id" type="hidden">
+
           <div>
             <label for="p-name">Nombre</label>
             <input id="p-name" required>
@@ -267,12 +258,21 @@
             </select>
           </div>
 
-          <button class="admin-btn" type="submit">
+          <button id="admin-submit-btn" class="admin-btn" type="submit">
             Guardar producto
+          </button>
+          <button
+            id="admin-cancel-edit"
+            type="button"
+            class="admin-btn secondary"
+            style="display:none;"
+            onclick="cancelEdit()"
+          >
+            Cancelar edición
           </button>
 
           <small id="admin-form-msg" class="admin-message">
-            Al guardar, el producto se almacena en la base de datos (Redis) y,
+            Al guardar, el producto se almacena en la base de datos y,
             si está activo, aparece en la tienda.
           </small>
         </form>
@@ -281,9 +281,12 @@
   </div>
 
   <script>
-    const ADMIN_PASSWORD = "tsfadmin2025";   // contraseña de acceso al panel
-    const ADMIN_TOKEN = "tsfadmin2025";      // debe coincidir con ADMIN_TOKEN del backend
+    const ADMIN_PASSWORD = "tsfadmin2025";
+    const ADMIN_TOKEN = "tsfadmin2025";
     const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+
+    let currentProducts = [];
+    let editingId = null;
 
     function handleAdminLogin() {
       const input = document.getElementById("admin-password");
@@ -302,7 +305,7 @@
 
     async function loadAdminProducts() {
       const tbody = document.getElementById("admin-products-tbody");
-      tbody.innerHTML = '<tr><td colspan="4">Cargando productos...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5">Cargando productos...</td></tr>';
 
       try {
         const res = await fetch(`${API_BASE}/api/admin-products`, {
@@ -316,14 +319,15 @@
           throw new Error("Respuesta inválida");
         }
 
-        const products = data.products;
-        if (!products.length) {
-          tbody.innerHTML = '<tr><td colspan="4">No hay productos.</td></tr>';
+        currentProducts = data.products;
+
+        if (!currentProducts.length) {
+          tbody.innerHTML = '<tr><td colspan="5">No hay productos.</td></tr>';
           return;
         }
 
         tbody.innerHTML = "";
-        products.forEach((p) => {
+        currentProducts.forEach((p) => {
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
@@ -331,9 +335,21 @@
             <td>USD ${(p.price_cents / 100).toFixed(2)}</td>
             <td>${p.type || "-"}</td>
             <td>
-              <span class="admin-badge ${p.is_active ? "admin-badge--active" : "admin-badge--inactive"}">
+              <span class="admin-badge ${
+                p.is_active ? "admin-badge--active" : "admin-badge--inactive"
+              }">
                 ${p.is_active ? "Activo" : "Oculto"}
               </span>
+            </td>
+            <td>
+              <button class="admin-btn secondary" type="button"
+                onclick="startEditProduct('${p.id}')">
+                Editar
+              </button>
+              <button class="admin-btn danger" type="button"
+                onclick="deleteProduct('${p.id}')">
+                Eliminar
+              </button>
             </td>
           `;
 
@@ -341,15 +357,61 @@
         });
       } catch (err) {
         console.error("Error cargando productos en admin:", err);
-        tbody.innerHTML = '<tr><td colspan="4">Error al cargar productos.</td></tr>';
+        tbody.innerHTML =
+          '<tr><td colspan="5">Error al cargar productos.</td></tr>';
       }
     }
 
-    function handleCreateProduct(event) {
+    function fillFormWithProduct(p) {
+      document.getElementById("p-id").value = p.id || "";
+      document.getElementById("p-name").value = p.name || "";
+      document.getElementById("p-price").value =
+        p.price_cents != null ? (p.price_cents / 100).toFixed(2) : "";
+      document.getElementById("p-type").value = p.type || "other";
+      document.getElementById("p-desc").value = p.short_description || "";
+      document.getElementById("p-img").value = p.image_url || "";
+      document.getElementById("p-active").value = p.is_active ? "true" : "false";
+    }
+
+    function resetForm() {
+      editingId = null;
+      document.getElementById("p-id").value = "";
+      document.getElementById("admin-form-title").textContent =
+        "Crear nuevo producto";
+      document.getElementById("admin-submit-btn").textContent =
+        "Guardar producto";
+      document.getElementById("admin-cancel-edit").style.display = "none";
+      document.getElementById("admin-form-msg").textContent =
+        "Al guardar, el producto se almacena en la base de datos y, si está activo, aparece en la tienda.";
+    }
+
+    function startEditProduct(id) {
+      const p = currentProducts.find((prod) => prod.id === id);
+      if (!p) return;
+
+      editingId = id;
+      fillFormWithProduct(p);
+      document.getElementById("admin-form-title").textContent =
+        "Editar producto";
+      document.getElementById("admin-submit-btn").textContent =
+        "Guardar cambios";
+      document.getElementById("admin-cancel-edit").style.display = "inline-flex";
+      document.getElementById("admin-form-msg").textContent =
+        "Estás editando un producto existente. Guardá para aplicar cambios.";
+    }
+
+    function cancelEdit() {
+      resetForm();
+    }
+
+    function handleSubmitProduct(event) {
       event.preventDefault();
 
+      const id = document.getElementById("p-id").value || null;
       const name = document.getElementById("p-name").value.trim();
-      const priceUsd = parseFloat(document.getElementById("p-price").value || "0");
+      const priceUsd = parseFloat(
+        document.getElementById("p-price").value || "0"
+      );
       const type = document.getElementById("p-type").value;
       const desc = document.getElementById("p-desc").value.trim();
       const img = document.getElementById("p-img").value.trim();
@@ -358,6 +420,7 @@
       const price_cents = Math.round(priceUsd * 100);
 
       const payload = {
+        id: editingId || id || undefined,
         name,
         price_cents,
         type,
@@ -369,8 +432,10 @@
       const msg = document.getElementById("admin-form-msg");
       msg.textContent = "Guardando producto...";
 
+      const method = editingId ? "PUT" : "POST";
+
       fetch(`${API_BASE}/api/admin-products`, {
-        method: "POST",
+        method,
         headers: {
           "Content-Type": "application/json",
           "x-admin-token": ADMIN_TOKEN,
@@ -380,19 +445,52 @@
         .then((res) => res.json())
         .then((data) => {
           if (!data || !data.ok) {
-            console.error("Error al crear producto:", data);
-            msg.textContent = "Error al crear producto.";
+            console.error("Error al guardar producto:", data);
+            msg.textContent = "Error al guardar producto.";
             return;
           }
 
-          msg.textContent = "Producto creado correctamente.";
+          msg.textContent = editingId
+            ? "Producto actualizado correctamente."
+            : "Producto creado correctamente.";
+
+          resetForm();
           loadAdminProducts();
-          // opcional: limpiar el formulario
-          // event.target.reset();
         })
         .catch((err) => {
-          console.error("Error fetch crear producto:", err);
+          console.error("Error fetch guardar producto:", err);
           msg.textContent = "Error de conexión al guardar.";
+        });
+    }
+
+    function deleteProduct(id) {
+      if (!confirm("¿Seguro que querés eliminar este producto?")) return;
+
+      const msg = document.getElementById("admin-form-msg");
+      msg.textContent = "Eliminando producto...";
+
+      fetch(`${API_BASE}/api/admin-products`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": ADMIN_TOKEN,
+        },
+        body: JSON.stringify({ id }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data || !data.ok) {
+            console.error("Error al eliminar producto:", data);
+            msg.textContent = "Error al eliminar producto.";
+            return;
+          }
+          msg.textContent = "Producto eliminado correctamente.";
+          if (editingId === id) resetForm();
+          loadAdminProducts();
+        })
+        .catch((err) => {
+          console.error("Error fetch eliminar producto:", err);
+          msg.textContent = "Error de conexión al eliminar.";
         });
     }
   </script>
