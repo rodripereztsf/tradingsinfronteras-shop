@@ -13,7 +13,10 @@ const seedProducts = [
     image_url: "https://rodripereztsf.github.io/IMG/formacion-inicial.jpg",
     is_active: true,
     delivery_type: "drive_link",
-    delivery_value: "https://drive.google.com/XXXXX"
+    delivery_value: "https://drive.google.com/XXXXX",
+    instructions:
+      "<p>Te recomiendo ver las clases en orden, tomando apuntes y pausando cuando sea necesario. Tené tu diario de trading a mano y aplicá cada concepto en demo antes de llevarlo a real.</p>",
+    pdf_url: "https://tusitio.com/pdfs/formacion-inicial-tsf.pdf"
   },
   {
     id: "formacion-avanzada-liquidez",
@@ -26,7 +29,10 @@ const seedProducts = [
     image_url: "https://rodripereztsf.github.io/IMG/formacion-avanzada.jpg",
     is_active: true,
     delivery_type: "drive_link",
-    delivery_value: "https://drive.google.com/YYYYY"
+    delivery_value: "https://drive.google.com/YYYYY",
+    instructions:
+      "<p>Esta formación está pensada para que la veas con el gráfico abierto. Seguí los ejemplos en XAUUSD, marcá estructura, liquidez y zonas clave y practicá primero en demo.</p>",
+    pdf_url: "https://tusitio.com/pdfs/formacion-avanzada-liquidez.pdf"
   },
   {
     id: "indicador-liquidez-tsf",
@@ -39,7 +45,10 @@ const seedProducts = [
     image_url: "https://rodripereztsf.github.io/IMG/indicador-liquidez.jpg",
     is_active: true,
     delivery_type: "instruction_page",
-    delivery_value: "/acceso/indicador-liquidez-tsf"
+    delivery_value: "/acceso/indicador-liquidez-tsf",
+    instructions:
+      "<p>Dentro del acceso privado vas a encontrar el código o el usuario autorizado en TradingView, junto con el paso a paso para agregar el indicador a tu gráfico.</p>",
+    pdf_url: "https://tusitio.com/pdfs/indicador-liquidez-tsf.pdf"
   },
   {
     id: "bot-scalping-xauusd",
@@ -52,7 +61,10 @@ const seedProducts = [
     image_url: "https://rodripereztsf.github.io/IMG/bot-scalping.jpg",
     is_active: true,
     delivery_type: "instruction_page",
-    delivery_value: "/acceso/bot-scalping-xauusd"
+    delivery_value: "/acceso/bot-scalping-xauusd",
+    instructions:
+      "<p>Seguí el instructivo paso a paso para instalar el bot en MT5, configurar el tamaño de lote, riesgo por operación y horarios de operación recomendados.</p>",
+    pdf_url: "https://tusitio.com/pdfs/bot-scalping-xauusd.pdf"
   },
   {
     id: "remera-oficial-tsf",
@@ -65,7 +77,9 @@ const seedProducts = [
     image_url: "https://rodripereztsf.github.io/IMG/remera-oficial.jpg",
     is_active: true,
     delivery_type: "none",
-    delivery_value: ""
+    delivery_value: "",
+    instructions: "",
+    pdf_url: ""
   }
 ];
 
@@ -106,7 +120,6 @@ module.exports = async (req, res) => {
   try {
     const redis = await getRedis();
 
-    // leemos productos
     let products = await redis.get("tsf:products");
 
     // si no hay nada en Redis, sembramos el seed inicial
