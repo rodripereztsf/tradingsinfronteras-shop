@@ -39,8 +39,8 @@ async function readJsonBody(req) {
   });
 }
 
-// helper opcional para enviar mail (Resend)
-// si no hay RESEND_API_KEY, simplemente no manda nada
+// helper para enviar mail de acceso (Resend)
+// si no hay RESEND_API_KEY, simplemente loguea y no manda nada
 async function sendAccessEmail(to, accessLinks) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -51,21 +51,43 @@ async function sendAccessEmail(to, accessLinks) {
   const subject = "Tu acceso a TRADING SIN FRONTERAS SHOP";
 
   const linksHtml = accessLinks
-    .map(
-      (link) =>
-        `<li><strong>${link.product_name}</strong>: <a href="${link.url}">${link.url}</a></li>`
-    )
+    .map((link) => {
+      const safeName = link.product_name || "Contenido TSF";
+      const mainLink = `<li>
+        <strong>${safeName}</strong><br/>
+        Acceso seguro TSF: <a href="${link.url}">${link.url}</a>
+      `;
+
+      const contentPart = link.content_url
+        ? `<br/>Contenido (Drive / recurso): <a href="${link.content_url}">${link.content_url}</a>`
+        : "";
+
+      return `${mainLink}${contentPart}</li>`;
+    })
     .join("");
 
   const html = `
-    <div style="font-family: sans-serif; color: #111;">
-      <h2>Gracias por tu compra en TRADING SIN FRONTERAS SHOP</h2>
-      <p>Estos son tus accesos privados a los productos digitales:</p>
+    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111; line-height: 1.5;">
+      <h2 style="margin-bottom: 8px;">Gracias por tu compra en <span style="color:#f1c40f;">TRADING SIN FRONTERAS SHOP</span></h2>
+      <p>Te doy la bienvenida oficialmente a la comunidad. A continuación tenés tus accesos privados a los productos digitales que adquiriste:</p>
       <ul>
         ${linksHtml}
       </ul>
-      <p>Te recomendamos guardar este correo para futuras consultas.</p>
-      <p>Un abrazo,<br/>Rodrigo Pérez – Trading Sin Fronteras</p>
+      <p>
+        Cada enlace de <strong>Acceso seguro TSF</strong> es único y privado para vos.<br/>
+        Dentro de esa página vas a encontrar el instructivo, materiales y, cuando corresponda, el link directo a tu contenido (Drive, indicadores, bots, etc.).
+      </p>
+      <p style="margin-top:16px;">
+        Te recomiendo:<br/>
+        • Guardar este correo en una carpeta de favoritos.<br/>
+        • No compartir los enlaces de acceso con terceros.<br/>
+        • Si cambiaste de mail o necesitás soporte, escribinos con el comprobante de pago.
+      </p>
+      <p style="margin-top:18px;">
+        Un abrazo,<br/>
+        <strong>Rodrigo Pérez</strong><br/>
+        Founder – Trading Sin Fronteras
+      </p>
     </div>
   `;
 
@@ -153,14 +175,15 @@ module.exports = async (req, res) => {
 
     const lineItems = session.line_items?.data || [];
     const accessLinks = [];
+
     const baseAccessUrl =
       process.env.ACCESS_BASE_URL ||
       "https://tradingsinfronteras-shop.vercel.app/access.html";
 
     for (const li of lineItems) {
       const name = li.description || li.price?.product || "Producto";
-      // buscamos el producto por nombre
       const product = products.find((p) => p.name === name);
+
       if (!product) {
         console.warn("Producto no encontrado por nombre:", name);
         continue;
@@ -193,6 +216,7 @@ module.exports = async (req, res) => {
         token,
         product_name: product.name,
         url,
+        content_url: product.delivery_value || null,
       });
     }
 
@@ -203,7 +227,7 @@ module.exports = async (req, res) => {
       created_at: Date.now(),
     });
 
-    // enviamos mail si es posible
+    // enviamos mail si hay al menos un acceso
     if (accessLinks.length > 0) {
       try {
         await sendAccessEmail(email, accessLinks);
@@ -220,7 +244,10 @@ module.exports = async (req, res) => {
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     return res.end(
-      JSON.stringify({ error: "Internal server error", message: err?.message })
+      JSON.stringify({
+        error: "Internal server error",
+        message: err?.message,
+      })
     );
   }
 };
