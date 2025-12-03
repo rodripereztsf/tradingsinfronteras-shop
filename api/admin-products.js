@@ -21,7 +21,7 @@ async function getRedis() {
     redisPromise = import("@upstash/redis").then(({ Redis }) => {
       return new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN
       });
     });
   }
@@ -68,7 +68,7 @@ module.exports = async (req, res) => {
   try {
     const redis = await getRedis();
 
-    // ------------------ GET: lista todos los productos ------------------
+    // GET → lista todos los productos
     if (req.method === "GET") {
       let products = await redis.get("tsf:products");
       if (!Array.isArray(products)) products = [];
@@ -78,10 +78,10 @@ module.exports = async (req, res) => {
       return res.end(JSON.stringify({ products }));
     }
 
-    // a partir de acá, necesitamos body
+    // para POST/PUT/DELETE leemos body
     const data = await readJsonBody(req);
 
-    // ------------------ POST: crear producto ------------------
+    // POST → crear producto
     if (req.method === "POST") {
       const id =
         data.id ||
@@ -103,8 +103,10 @@ module.exports = async (req, res) => {
         currency: "USD",
         image_url: data.image_url || "",
         is_active: Boolean(data.is_active),
-        delivery_type: data.delivery_type || "none",
+        delivery_type: data.delivery_type || "generated_access",
         delivery_value: data.delivery_value || "",
+        instructions: data.instructions || "",
+        pdf_url: data.pdf_url || ""
       };
 
       let products = await redis.get("tsf:products");
@@ -118,7 +120,7 @@ module.exports = async (req, res) => {
       return res.end(JSON.stringify({ ok: true, product }));
     }
 
-    // ------------------ PUT: actualizar producto ------------------
+    // PUT → actualizar producto
     if (req.method === "PUT") {
       const { id } = data;
       if (!id) {
@@ -150,6 +152,12 @@ module.exports = async (req, res) => {
           data.is_active !== undefined
             ? Boolean(data.is_active)
             : current.is_active,
+        instructions:
+          data.instructions !== undefined
+            ? data.instructions
+            : current.instructions || "",
+        pdf_url:
+          data.pdf_url !== undefined ? data.pdf_url : current.pdf_url || ""
       };
 
       products[index] = updated;
@@ -160,7 +168,7 @@ module.exports = async (req, res) => {
       return res.end(JSON.stringify({ ok: true, product: updated }));
     }
 
-    // ------------------ DELETE: eliminar producto ------------------
+    // DELETE → eliminar producto
     if (req.method === "DELETE") {
       const { id } = data;
       if (!id) {
