@@ -187,7 +187,7 @@
   <div id="admin-panel" class="admin-wrapper" style="display:none;">
     <h1 class="admin-title">Panel de productos – TSF SHOP</h1>
     <p class="admin-subtitle">
-      Creá, edita y elimina productos. Los activos se muestran en la tienda.
+      Creá, edita y eliminá productos. Los activos se muestran en la tienda.
     </p>
 
     <div class="admin-grid">
@@ -251,6 +251,18 @@
           </div>
 
           <div>
+            <label for="p-instructions">Instructivo (HTML o texto)</label>
+            <textarea id="p-instructions" rows="4" placeholder="Pasos, recomendaciones, detalles específicos del producto..."></textarea>
+            <small>Este texto se incluye en el mail de acceso y en la página privada.</small>
+          </div>
+
+          <div>
+            <label for="p-pdf">URL PDF instructivo (opcional)</label>
+            <input id="p-pdf" placeholder="https://.../instructivo.pdf">
+            <small>Si lo completás, en el mail aparecerá un link para descargar el PDF.</small>
+          </div>
+
+          <div>
             <label for="p-active">Activo</label>
             <select id="p-active">
               <option value="true">Sí, mostrar en la tienda</option>
@@ -272,8 +284,7 @@
           </button>
 
           <small id="admin-form-msg" class="admin-message">
-            Al guardar, el producto se almacena en la base de datos y,
-            si está activo, aparece en la tienda.
+            Al guardar, el producto se almacena en la base de datos y, si está activo, aparece en la tienda.
           </small>
         </form>
       </section>
@@ -370,12 +381,22 @@
       document.getElementById("p-type").value = p.type || "other";
       document.getElementById("p-desc").value = p.short_description || "";
       document.getElementById("p-img").value = p.image_url || "";
+      document.getElementById("p-instructions").value = p.instructions || "";
+      document.getElementById("p-pdf").value = p.pdf_url || "";
       document.getElementById("p-active").value = p.is_active ? "true" : "false";
     }
 
     function resetForm() {
       editingId = null;
       document.getElementById("p-id").value = "";
+      document.getElementById("p-name").value = "";
+      document.getElementById("p-price").value = "";
+      document.getElementById("p-type").value = "course";
+      document.getElementById("p-desc").value = "";
+      document.getElementById("p-img").value = "";
+      document.getElementById("p-instructions").value = "";
+      document.getElementById("p-pdf").value = "";
+      document.getElementById("p-active").value = "true";
       document.getElementById("admin-form-title").textContent =
         "Crear nuevo producto";
       document.getElementById("admin-submit-btn").textContent =
@@ -416,6 +437,10 @@
       const desc = document.getElementById("p-desc").value.trim();
       const img = document.getElementById("p-img").value.trim();
       const isActive = document.getElementById("p-active").value === "true";
+      const instructions = document
+        .getElementById("p-instructions")
+        .value.trim();
+      const pdfUrl = document.getElementById("p-pdf").value.trim();
 
       const price_cents = Math.round(priceUsd * 100);
 
@@ -427,6 +452,8 @@
         short_description: desc,
         image_url: img,
         is_active: isActive,
+        instructions,
+        pdf_url: pdfUrl,
       };
 
       const msg = document.getElementById("admin-form-msg");
