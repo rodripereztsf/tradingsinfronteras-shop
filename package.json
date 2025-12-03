@@ -2,9 +2,12 @@
   "name": "tradingsinfronteras-shop",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "test": "echo \"no tests\""
+  },
   "dependencies": {
-    "stripe": "^12.0.0",
-    "@upstash/redis": "^1.28.4"
+    "@upstash/redis": "^1.28.4",
+    "stripe": "^14.0.0",
     "nodemailer": "^6.9.0"
   }
 }
