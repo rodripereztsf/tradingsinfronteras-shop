@@ -17,7 +17,7 @@ async function getRedis() {
     });
   }
   return redisPromise;
-};
+}
 
 module.exports = async (req, res) => {
   setCors(res);
