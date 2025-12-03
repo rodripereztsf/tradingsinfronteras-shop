@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Acceso a tu contenido - TSF SHOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .access-wrapper {
+      max-width: 700px;
+      margin: 80px auto;
+      padding: 24px;
+      background: #05060a;
+      border-radius: 16px;
+      border: 1px solid #222;
+    }
+    .access-title {
+      font-size: 1.7rem;
+      margin-bottom: 12px;
+    }
+    .access-text {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      margin-bottom: 16px;
+    }
+    .access-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #0b0d13;
+    }
+    .access-link {
+      word-break: break-all;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="access-wrapper">
+      <h1 class="access-title">Acceso a tu contenido</h1>
+      <p id="access-status" class="access-text">
+        Cargando tu acceso...
+      </p>
+
+      <div id="access-content" style="display:none;" class="access-box">
+        <h2 id="access-product-name"></h2>
+        <p class="access-text">
+          A continuación tenés el enlace de acceso al contenido asociado a tu compra.
+        </p>
+        <p class="access-link">
+          <a id="access-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+    const statusEl = document.getElementById("access-status");
+    const boxEl = document.getElementById("access-content");
+    const productNameEl = document.getElementById("access-product-name");
+    const linkEl = document.getElementById("access-link");
+
+    function getTokenFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("token");
+    }
+
+    async function loadAccess() {
+      const token = getTokenFromUrl();
+      if (!token) {
+        statusEl.textContent = "No se encontró un token de acceso válido.";
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/access?token=${encodeURIComponent(token)}`
+        );
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          statusEl.textContent =
+            "No se encontró este acceso o ya no es válido. Si creés que es un error, contactá a soporte.";
+          return;
+        }
+
+        statusEl.style.display = "none";
+        boxEl.style.display = "block";
+
+        productNameEl.textContent = data.product_name || "Contenido TSF";
+
+        // Por ahora usamos delivery_value directo (ej: link de Drive)
+        const url = data.delivery_value || "#";
+        linkEl.href = url;
+        linkEl.textContent = url
+          ? "Hacé clic acá para acceder al contenido"
+          : "Todavía no hay un link asignado. Contactá a soporte.";
+      } catch (err) {
+        console.error("Error cargando acceso:", err);
+        statusEl.textContent =
+          "Error al cargar tu acceso. Si el problema persiste, contactá a soporte.";
+      }
+    }
+
+    loadAccess();
+  </script>
+</body>
+</html>
