@@ -8,18 +8,11 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const setCors = (res) => {
   res.setHeader(
     "Access-Control-Allow-Origin",
-    "https://rodripereztsf.github.io" // dominio CORRECTO de tu tienda
+    "https://rodripereztst.github.io" // tu tienda en GitHub Pages
   );
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,OPTIONS"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type"
-  );
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 };
-
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -47,26 +40,19 @@ module.exports = async (req, res) => {
     }
 
     // ⚠️ ESTE RATE TIENE QUE MATCHEAR CON EL DEL FRONT (script.js)
-    // Si tu precio en la tienda es "USD 149.90" y en el código lo manejás como 14990,
-    // este RATE = 1 / 1000 convierte 14990 -> 14.99 USD para Stripe.
     const USD_RATE = 1 / 1000;
 
-    // ---------------------------------------------------------
-    // Construimos line_items para Stripe, asegurando quantity
-    // ---------------------------------------------------------
     const line_items = items.map((item, index) => {
       const name = item.name || `Producto ${index + 1}`;
       const priceNumber = Number(item.price) || 0;
-
-      // Aceptamos tanto "quantity" como "qty" desde el front
-      const quantity =
-        Number(item.quantity ?? item.qty ?? 1) || 1;
+      const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
 
       return {
         price_data: {
           currency: "usd",
-          product_data: { name },
-          // priceNumber viene en “miles” (14990) => lo llevamos a 14.99 USD
+          product_data: {
+            name,
+          },
           unit_amount: Math.round(priceNumber * USD_RATE * 100), // en centavos
         },
         quantity,
@@ -76,7 +62,8 @@ module.exports = async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
-      success_url: successUrl,
+      // 🔥 acá agregamos el session_id en la URL de éxito
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
     });
 
