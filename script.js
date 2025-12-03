@@ -206,8 +206,7 @@ async function payWithStripe() {
     const successUrl = window.location.origin + "/checkout-success-stripe.html";
     const cancelUrl = window.location.href;
 
-    const response = await fetch(
-      `${API_BASE}/api/create-stripe-checkout`,
+    const response = await fetch(`${API_BASE}/api/create-stripe-checkout`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
