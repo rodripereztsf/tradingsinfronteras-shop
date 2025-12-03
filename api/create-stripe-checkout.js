@@ -1,88 +1,125 @@
-// api/create-stripe-checkout.js
-
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
-// CORS abierto para pruebas (después podemos limitar a tu dominio)
-const setCors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-};
-
-module.exports = async (req, res) => {
-  setCors(res);
-
-  // Preflight
-  if (req.method === "OPTIONS") {
-    res.statusCode = 200;
-    return res.end();
-  }
-
-  // Solo POST
-  if (req.method !== "POST") {
-    res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Method not allowed" }));
-  }
-
-  try {
-    // En Vercel a veces req.body llega como string
-    const body =
-      typeof req.body === "string"
-        ? JSON.parse(req.body || "{}")
-        : req.body || {};
-
-    const { items, successUrl, cancelUrl } = body;
-
-    if (!Array.isArray(items) || items.length === 0) {
-      res.statusCode = 400;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ error: "Cart is empty" }));
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pago recibido - TSF SHOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background: #020308;
+      color: #fff;
+      text-align: center;
+      padding: 40px 16px;
     }
 
-    // IMPORTANTE: este RATE debe matchear con lo que usás en el front
-    // Si en la tienda manejás 4990 = 49.90 USD, entonces:
-    // USD_RATE = 1 / 100
-    const USD_RATE = 1 / 100;
+    .success-box {
+      max-width: 600px;
+      margin: 60px auto;
+      background: #05060a;
+      border-radius: 16px;
+      border: 1px solid #222;
+      padding: 24px 20px;
+    }
 
-    const line_items = items.map((item, index) => {
-      const name = item.name || `Producto ${index + 1}`;
-      const priceNumber = Number(item.price) || 0; // lo mandamos en centavos "internos"
+    .success-title {
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+    }
 
-      const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
+    .success-msg {
+      font-size: 0.95rem;
+      opacity: 0.85;
+      margin-bottom: 16px;
+    }
 
-      return {
-        price_data: {
-          currency: "usd",
-          product_data: { name },
-          // Convertimos de tu "centavo interno" al centavo real de Stripe:
-          // 4990 * (1/100) * 100 = 4990 → 49.90 USD
-          unit_amount: Math.round(priceNumber * USD_RATE),
-        },
-        quantity,
-      };
-    });
+    .status {
+      font-size: 0.85rem;
+      margin-top: 12px;
+      opacity: 0.8;
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    });
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px;
+      border-radius: 999px;
+      border: 1px solid #f1c40f;
+      color: #f1c40f;
+      background: transparent;
+      font-weight: 600;
+      margin-top: 20px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="success-box">
+    <h1 class="success-title">¡Pago recibido correctamente!</h1>
+    <p class="success-msg">
+      Estamos procesando tu compra y generando el acceso a tus productos TSF.
+    </p>
+    <p id="status-text" class="status">
+      Confirmando tu compra con Stripe...
+    </p>
 
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ url: session.url }));
-  } catch (err) {
-    console.error("Stripe error:", err);
+    <a href="index.html" class="btn-primary">Volver a la tienda</a>
+  </div>
 
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(
-      JSON.stringify({
-        error: "Error creating Stripe checkout",
-        message: err?.message,
-      })
-    );
-  }
-};
+  <script>
+    const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+
+    function getSessionId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("session_id") || params.get("sessionId");
+    }
+
+    async function processSuccess() {
+      const statusEl = document.getElementById("status-text");
+      const sessionId = getSessionId();
+
+      if (!sessionId) {
+        statusEl.textContent =
+          "No se encontró la sesión de pago. Si ya realizaste el pago, revisá tu correo o contactá con soporte TSF.";
+        return;
+      }
+
+      try {
+        statusEl.textContent = "Confirmando tu compra y enviando el correo de acceso...";
+
+        const res = await fetch(`${API_BASE}/api/checkout-success-handler`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          console.error("checkout-success-handler error:", data);
+          statusEl.textContent =
+            "Tu pago fue recibido, pero hubo un error al procesar el acceso automático. Por favor, revisá tu correo unos minutos más tarde o escribinos con el comprobante.";
+          return;
+        }
+
+        statusEl.textContent =
+          "Listo. En los próximos minutos deberías recibir un correo con todos los accesos e instructivos.";
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent =
+          "Tu pago fue recibido, pero hubo un error de conexión al procesar el acceso automático. Si no recibís el correo, contactanos con tu comprobante.";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", processSuccess);
+  </script>
+</body>
+</html>
