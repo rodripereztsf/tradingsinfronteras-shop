@@ -40,7 +40,6 @@ async function readJsonBody(req) {
 }
 
 // helper para enviar mail de acceso (Resend)
-// si no hay RESEND_API_KEY, simplemente loguea y no manda nada
 async function sendAccessEmail(to, accessLinks) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -53,16 +52,26 @@ async function sendAccessEmail(to, accessLinks) {
   const linksHtml = accessLinks
     .map((link) => {
       const safeName = link.product_name || "Contenido TSF";
-      const mainLink = `<li>
+
+      let htmlItem = `<li style="margin-bottom:12px;">
         <strong>${safeName}</strong><br/>
         Acceso seguro TSF: <a href="${link.url}">${link.url}</a>
       `;
 
-      const contentPart = link.content_url
-        ? `<br/>Contenido (Drive / recurso): <a href="${link.content_url}">${link.content_url}</a>`
-        : "";
+      if (link.content_url) {
+        htmlItem += `<br/>Contenido (Drive / recurso): <a href="${link.content_url}">${link.content_url}</a>`;
+      }
 
-      return `${mainLink}${contentPart}</li>`;
+      if (link.instructions) {
+        htmlItem += `<br/><br/><em>Instructivo:</em><br/>${link.instructions}`;
+      }
+
+      if (link.pdf_url) {
+        htmlItem += `<br/><br/>Instructivo en PDF: <a href="${link.pdf_url}">${link.pdf_url}</a>`;
+      }
+
+      htmlItem += "</li>";
+      return htmlItem;
     })
     .join("");
 
@@ -206,6 +215,8 @@ module.exports = async (req, res) => {
         created_at: Date.now(),
         delivery_type: product.delivery_type || "generated_access",
         delivery_value: product.delivery_value || "",
+        instructions: product.instructions || "",
+        pdf_url: product.pdf_url || ""
       };
 
       await redis.set(`tsf:access:${token}`, record);
@@ -217,6 +228,8 @@ module.exports = async (req, res) => {
         product_name: product.name,
         url,
         content_url: product.delivery_value || null,
+        instructions: product.instructions || "",
+        pdf_url: product.pdf_url || null,
       });
     }
 
