@@ -1,12 +1,108 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Pago exitoso - Stripe</title>
+  <meta charset="UTF-8">
+  <title>Gracias por tu compra - TSF SHOP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .success-wrapper {
+      max-width: 600px;
+      margin: 80px auto;
+      padding: 24px;
+      text-align: center;
+      background: #05060a;
+      border-radius: 16px;
+      border: 1px solid #222;
+    }
+    .success-title {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+    }
+    .success-text {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      margin-bottom: 16px;
+    }
+    .success-status {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 12px;
+    }
+    .success-link {
+      margin-top: 16px;
+      display: block;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>¡Pago realizado con éxito!</h1>
-  <p>Gracias por tu compra. El pago vía Stripe se registró correctamente.</p>
-  <a href="index.html">Volver a la tienda</a>
+  <main>
+    <div class="success-wrapper">
+      <h1 class="success-title">¡Gracias por tu compra!</h1>
+      <p class="success-text">
+        Estamos confirmando tu pago y generando tus accesos privados.<br>
+        Esto suele tardar unos segundos.
+      </p>
+      <p id="success-status" class="success-status">
+        Procesando tu sesión de pago...
+      </p>
+      <p class="success-status">
+        Si no recibís el email en unos minutos, revisá Spam o Promociones.
+      </p>
+
+      <a href="index.html" class="success-link">Volver a la tienda</a>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+    const statusEl = document.getElementById("success-status");
+
+    function getSessionIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("session_id");
+    }
+
+    async function processSession() {
+      const sessionId = getSessionIdFromUrl();
+      if (!sessionId) {
+        statusEl.textContent =
+          "No se encontró el identificador de sesión. Si realizaste el pago, revisá tu correo.";
+        return;
+      }
+
+      statusEl.textContent = "Confirmando pago y generando accesos...";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/checkout-success-handler`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          console.error("Error al procesar la sesión:", data);
+          statusEl.textContent =
+            "Hubo un problema al generar tus accesos. Si el cargo se realizó, por favor contactá a soporte con el comprobante.";
+          return;
+        }
+
+        statusEl.textContent =
+          "Listo. En unos minutos deberías recibir un email con tus accesos.";
+      } catch (err) {
+        console.error("Error procesando sesión:", err);
+        statusEl.textContent =
+          "Error de conexión al generar tus accesos. Si el pago se realizó, contactá a soporte.";
+      }
+    }
+
+    processSession();
+  </script>
 </body>
 </html>
