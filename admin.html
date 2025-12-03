@@ -1,64 +1,85 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Admin TSF SHOP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
 
   <style>
+    body {
+      font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background: #020308;
+      color: #fff;
+    }
+
     .admin-wrapper {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 80px auto;
       padding: 24px;
       background: #05060a;
       border-radius: 16px;
       border: 1px solid #222;
     }
+
     .admin-title {
       font-size: 1.8rem;
-      margin-bottom: 16px;
+      margin-bottom: 6px;
     }
+
     .admin-subtitle {
       font-size: 0.9rem;
       opacity: 0.75;
       margin-bottom: 24px;
     }
+
     .admin-grid {
       display: grid;
-      grid-template-columns: 2fr 1.3fr;
+      grid-template-columns: 1.4fr 1.2fr;
       gap: 24px;
     }
+
     .admin-card {
       background: #0b0d13;
       border-radius: 12px;
       padding: 16px;
       border: 1px solid #222;
     }
+
     .admin-card h2 {
       font-size: 1.1rem;
       margin-bottom: 12px;
     }
+
     .admin-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.85rem;
     }
+
     .admin-table th,
     .admin-table td {
       padding: 8px 6px;
       border-bottom: 1px solid #222;
       text-align: left;
+      vertical-align: middle;
     }
+
     .admin-table th {
       font-weight: 600;
       opacity: 0.9;
     }
+
     .admin-table tr:last-child td {
       border-bottom: none;
     }
+
     .admin-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -67,25 +88,53 @@
       border: 1px solid #444;
       opacity: 0.9;
     }
+
     .admin-badge--active {
       border-color: #2ecc71;
       color: #2ecc71;
     }
+
     .admin-badge--inactive {
       border-color: #e74c3c;
       color: #e74c3c;
     }
+
+    .admin-actions button {
+      font-size: 0.75rem;
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid #444;
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      margin-right: 6px;
+    }
+
+    .admin-actions button:nth-child(1) {
+      border-color: #f1c40f;
+      color: #f1c40f;
+    }
+
+    .admin-actions button:nth-child(2) {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
     .admin-form {
       display: flex;
       flex-direction: column;
       gap: 10px;
       font-size: 0.9rem;
     }
+
     .admin-form label {
       font-weight: 600;
       font-size: 0.8rem;
-      opacity: 0.8;
+      opacity: 0.85;
+      display: block;
+      margin-bottom: 2px;
     }
+
     .admin-form input,
     .admin-form textarea,
     .admin-form select {
@@ -98,14 +147,19 @@
       font-family: inherit;
       font-size: 0.85rem;
     }
+
     .admin-form textarea {
       resize: vertical;
       min-height: 60px;
     }
+
     .admin-form small {
       font-size: 0.7rem;
       opacity: 0.7;
+      display: block;
+      margin-top: 2px;
     }
+
     .admin-btn {
       display: inline-flex;
       align-items: center;
@@ -118,26 +172,20 @@
       cursor: pointer;
       font-weight: 600;
       font-size: 0.85rem;
-      margin-top: 6px;
+      margin-top: 8px;
     }
+
     .admin-btn.secondary {
-      border-color: #888;
+      border-color: #444;
       color: #ccc;
-      font-size: 0.75rem;
-      padding: 4px 10px;
-      margin-top: 0;
+      margin-left: 8px;
     }
-    .admin-btn.danger {
-      border-color: #e74c3c;
-      color: #e74c3c;
-      font-size: 0.75rem;
-      padding: 4px 10px;
-      margin-top: 0;
-    }
+
     .admin-btn:disabled {
       opacity: 0.4;
       cursor: default;
     }
+
     .admin-login {
       max-width: 400px;
       margin: 120px auto;
@@ -147,6 +195,7 @@
       background: #05060a;
       border: 1px solid #222;
     }
+
     .admin-login input {
       width: 100%;
       margin-top: 12px;
@@ -158,15 +207,26 @@
       color: #fff;
       font-family: inherit;
     }
+
     .admin-login button {
       width: 100%;
     }
+
     .admin-message {
       font-size: 0.8rem;
       margin-top: 8px;
       opacity: 0.8;
     }
-    @media (max-width: 900px) {
+
+    .admin-message.ok {
+      color: #2ecc71;
+    }
+
+    .admin-message.error {
+      color: #e74c3c;
+    }
+
+    @media (max-width: 1000px) {
       .admin-grid {
         grid-template-columns: 1fr;
       }
@@ -174,27 +234,33 @@
   </style>
 </head>
 <body>
-  <!-- Login -->
+  <!-- LOGIN -->
   <div id="admin-login" class="admin-login">
     <h1>Admin TSF SHOP</h1>
-    <p>Acceso solo para administradores.</p>
-    <input id="admin-password" type="password" placeholder="Contraseña de admin">
+    <p>Acceso sólo para administradores.</p>
+    <input
+      id="admin-password"
+      type="password"
+      placeholder="Contraseña de admin"
+    />
     <button class="admin-btn" onclick="handleAdminLogin()">Entrar</button>
     <div id="admin-login-msg" class="admin-message"></div>
   </div>
 
-  <!-- Panel -->
-  <div id="admin-panel" class="admin-wrapper" style="display:none;">
+  <!-- PANEL -->
+  <div id="admin-panel" class="admin-wrapper" style="display: none;">
     <h1 class="admin-title">Panel de productos – TSF SHOP</h1>
     <p class="admin-subtitle">
-      Creá, edita y eliminá productos. Los activos se muestran en la tienda.
+      Creá, editá y eliminá productos. Los marcados como <strong>Activos</strong> se
+      muestran en la tienda y se incluyen automáticamente en el flujo de compra,
+      acceso y mails.
     </p>
 
     <div class="admin-grid">
       <!-- LISTADO -->
       <section class="admin-card">
         <h2>Productos actuales</h2>
-        <table class="admin-table" id="admin-products-table">
+        <table class="admin-table">
           <thead>
             <tr>
               <th>Nombre</th>
@@ -215,17 +281,21 @@
       <!-- FORMULARIO -->
       <section class="admin-card">
         <h2 id="admin-form-title">Crear nuevo producto</h2>
-        <form class="admin-form" onsubmit="handleSubmitProduct(event)">
-          <input id="p-id" type="hidden">
-
+        <form class="admin-form" onsubmit="handleProductSubmit(event)">
           <div>
             <label for="p-name">Nombre</label>
-            <input id="p-name" required>
+            <input id="p-name" required />
           </div>
 
           <div>
             <label for="p-price">Precio (USD)</label>
-            <input id="p-price" type="number" step="0.01" min="0" required>
+            <input
+              id="p-price"
+              type="number"
+              step="0.01"
+              min="0"
+              required
+            />
             <small>Ejemplo: 49.9 → se guarda como 4990 centavos.</small>
           </div>
 
@@ -242,24 +312,87 @@
 
           <div>
             <label for="p-desc">Descripción corta</label>
-            <textarea id="p-desc" rows="3"></textarea>
+            <textarea
+              id="p-desc"
+              rows="2"
+              placeholder="Texto que aparece en la ficha del producto en la tienda..."
+            ></textarea>
           </div>
 
           <div>
             <label for="p-img">URL de imagen</label>
-            <input id="p-img" placeholder="https://...">
+            <input
+              id="p-img"
+              placeholder="https://..."
+            />
+            <small>Imagen que se muestra en la tarjeta del producto.</small>
           </div>
 
           <div>
-            <label for="p-instructions">Instructivo (HTML o texto)</label>
-            <textarea id="p-instructions" rows="4" placeholder="Pasos, recomendaciones, detalles específicos del producto..."></textarea>
-            <small>Este texto se incluye en el mail de acceso y en la página privada.</small>
+            <label for="p-delivery-value">
+              URL de acceso / entrega (Drive, link privado, etc.)
+            </label>
+            <input
+              id="p-delivery-value"
+              placeholder="https://drive.google.com/..."
+            />
+            <small>
+              Este link se incluye en el mail y en la página privada de acceso.
+            </small>
+          </div>
+
+          <div>
+            <label for="p-instructions">
+              Instructivo (HTML o texto)
+            </label>
+            <textarea
+              id="p-instructions"
+              rows="4"
+              placeholder="Pasos, recomendaciones, detalles específicos del producto..."
+            ></textarea>
+            <small>
+              Se muestra en la página de acceso y se incluye también en el mail
+              de bienvenida.
+            </small>
           </div>
 
           <div>
             <label for="p-pdf">URL PDF instructivo (opcional)</label>
-            <input id="p-pdf" placeholder="https://.../instructivo.pdf">
-            <small>Si lo completás, en el mail aparecerá un link para descargar el PDF.</small>
+            <input
+              id="p-pdf"
+              placeholder="https://.../instructivo.pdf"
+            />
+            <small>
+              Si lo completás, el mail incluirá el PDF como adjunto y también
+              se mostrará un link para descargarlo en la página de acceso.
+            </small>
+          </div>
+
+          <div>
+            <label for="p-email-subject">Asunto del mail (opcional)</label>
+            <input
+              id="p-email-subject"
+              placeholder="¡Bienvenido a la Formación Inicial TSF!"
+            />
+            <small>
+              Si lo dejás vacío se usa un asunto genérico.
+            </small>
+          </div>
+
+          <div>
+            <label for="p-email-body">Cuerpo del mail (HTML)</label>
+            <textarea
+              id="p-email-body"
+              rows="5"
+              placeholder="Podés usar {{name}}, {{product}} y {{delivery}} como variables."
+            ></textarea>
+            <small>
+              Podés usar variables:
+              <strong>{{name}}</strong> = nombre del comprador,
+              <strong>{{product}}</strong> = nombre del producto,
+              <strong>{{delivery}}</strong> = link de acceso / entrega.
+              Si lo dejás vacío se envía un mail genérico armado por el sistema.
+            </small>
           </div>
 
           <div>
@@ -270,21 +403,22 @@
             </select>
           </div>
 
-          <button id="admin-submit-btn" class="admin-btn" type="submit">
-            Guardar producto
-          </button>
-          <button
-            id="admin-cancel-edit"
-            type="button"
-            class="admin-btn secondary"
-            style="display:none;"
-            onclick="cancelEdit()"
-          >
-            Cancelar edición
-          </button>
+          <div style="display: flex; align-items: center; margin-top: 4px;">
+            <button class="admin-btn" type="submit" id="admin-submit-btn">
+              Guardar producto
+            </button>
+            <button
+              class="admin-btn secondary"
+              type="button"
+              onclick="resetForm()"
+            >
+              Limpiar / nuevo
+            </button>
+          </div>
 
           <small id="admin-form-msg" class="admin-message">
-            Al guardar, el producto se almacena en la base de datos y, si está activo, aparece en la tienda.
+            Completá los datos y guardá. Los cambios se aplican en la tienda y
+            en el flujo de mails.
           </small>
         </form>
       </section>
@@ -292,12 +426,12 @@
   </div>
 
   <script>
-    const ADMIN_PASSWORD = "tsfadmin2025";
-    const ADMIN_TOKEN = "tsfadmin2025";
+    // 👇 Ajustá esto si cambiás el dominio o el token interno
     const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
+    const ADMIN_PASSWORD = "tsfadmin2025"; // contraseña visual para entrar al panel
+    const ADMIN_API_TOKEN = "tsfadmin2025"; // debe matchear con process.env.ADMIN_TOKEN en el backend
 
-    let currentProducts = [];
-    let editingId = null;
+    let editingId = null; // id del producto que se está editando
 
     function handleAdminLogin() {
       const input = document.getElementById("admin-password");
@@ -309,6 +443,7 @@
         loadAdminProducts();
       } else {
         msg.textContent = "Contraseña incorrecta.";
+        msg.className = "admin-message error";
         input.value = "";
         input.focus();
       }
@@ -316,29 +451,32 @@
 
     async function loadAdminProducts() {
       const tbody = document.getElementById("admin-products-tbody");
-      tbody.innerHTML = '<tr><td colspan="5">Cargando productos...</td></tr>';
+      tbody.innerHTML =
+        '<tr><td colspan="5">Cargando productos...</td></tr>';
 
       try {
         const res = await fetch(`${API_BASE}/api/admin-products`, {
           headers: {
-            "x-admin-token": ADMIN_TOKEN,
+            "Content-Type": "application/json",
+            "x-admin-token": ADMIN_API_TOKEN,
           },
         });
-        const data = await res.json();
 
+        const data = await res.json();
         if (!data || !Array.isArray(data.products)) {
           throw new Error("Respuesta inválida");
         }
 
-        currentProducts = data.products;
+        const products = data.products;
 
-        if (!currentProducts.length) {
-          tbody.innerHTML = '<tr><td colspan="5">No hay productos.</td></tr>';
+        if (!products.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="5">No hay productos.</td></tr>';
           return;
         }
 
         tbody.innerHTML = "";
-        currentProducts.forEach((p) => {
+        products.forEach((p) => {
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
@@ -347,88 +485,85 @@
             <td>${p.type || "-"}</td>
             <td>
               <span class="admin-badge ${
-                p.is_active ? "admin-badge--active" : "admin-badge--inactive"
+                p.is_active
+                  ? "admin-badge--active"
+                  : "admin-badge--inactive"
               }">
                 ${p.is_active ? "Activo" : "Oculto"}
               </span>
             </td>
-            <td>
-              <button class="admin-btn secondary" type="button"
-                onclick="startEditProduct('${p.id}')">
-                Editar
-              </button>
-              <button class="admin-btn danger" type="button"
-                onclick="deleteProduct('${p.id}')">
-                Eliminar
-              </button>
+            <td class="admin-actions">
+              <button type="button" onclick='editProduct(${JSON.stringify(
+                p
+              ).replace(/'/g, "&apos;")})'>Editar</button>
+              <button type="button" onclick="deleteProduct('${
+                p.id
+              }')">Eliminar</button>
             </td>
           `;
 
           tbody.appendChild(tr);
         });
       } catch (err) {
-        console.error("Error cargando productos en admin:", err);
+        console.error(err);
         tbody.innerHTML =
           '<tr><td colspan="5">Error al cargar productos.</td></tr>';
       }
     }
 
-    function fillFormWithProduct(p) {
-      document.getElementById("p-id").value = p.id || "";
-      document.getElementById("p-name").value = p.name || "";
-      document.getElementById("p-price").value =
-        p.price_cents != null ? (p.price_cents / 100).toFixed(2) : "";
-      document.getElementById("p-type").value = p.type || "other";
-      document.getElementById("p-desc").value = p.short_description || "";
-      document.getElementById("p-img").value = p.image_url || "";
-      document.getElementById("p-instructions").value = p.instructions || "";
-      document.getElementById("p-pdf").value = p.pdf_url || "";
-      document.getElementById("p-active").value = p.is_active ? "true" : "false";
-    }
+    function editProduct(p) {
+      editingId = p.id || null;
 
-    function resetForm() {
-      editingId = null;
-      document.getElementById("p-id").value = "";
-      document.getElementById("p-name").value = "";
-      document.getElementById("p-price").value = "";
-      document.getElementById("p-type").value = "course";
-      document.getElementById("p-desc").value = "";
-      document.getElementById("p-img").value = "";
-      document.getElementById("p-instructions").value = "";
-      document.getElementById("p-pdf").value = "";
-      document.getElementById("p-active").value = "true";
-      document.getElementById("admin-form-title").textContent =
-        "Crear nuevo producto";
-      document.getElementById("admin-submit-btn").textContent =
-        "Guardar producto";
-      document.getElementById("admin-cancel-edit").style.display = "none";
-      document.getElementById("admin-form-msg").textContent =
-        "Al guardar, el producto se almacena en la base de datos y, si está activo, aparece en la tienda.";
-    }
-
-    function startEditProduct(id) {
-      const p = currentProducts.find((prod) => prod.id === id);
-      if (!p) return;
-
-      editingId = id;
-      fillFormWithProduct(p);
       document.getElementById("admin-form-title").textContent =
         "Editar producto";
       document.getElementById("admin-submit-btn").textContent =
         "Guardar cambios";
-      document.getElementById("admin-cancel-edit").style.display = "inline-flex";
-      document.getElementById("admin-form-msg").textContent =
-        "Estás editando un producto existente. Guardá para aplicar cambios.";
+
+      document.getElementById("p-name").value = p.name || "";
+      document.getElementById("p-price").value = p.price_cents
+        ? (p.price_cents / 100).toFixed(2)
+        : "";
+      document.getElementById("p-type").value = p.type || "course";
+      document.getElementById("p-desc").value =
+        p.short_description || "";
+      document.getElementById("p-img").value = p.image_url || "";
+      document.getElementById("p-delivery-value").value =
+        p.delivery_value || "";
+      document.getElementById("p-instructions").value =
+        p.instructions || "";
+      document.getElementById("p-pdf").value = p.pdf_url || "";
+      document.getElementById("p-email-subject").value =
+        p.email_subject || "";
+      document.getElementById("p-email-body").value =
+        p.email_body || "";
+      document.getElementById("p-active").value = String(
+        p.is_active !== false
+      );
+
+      const msg = document.getElementById("admin-form-msg");
+      msg.textContent = "Editando producto existente.";
+      msg.className = "admin-message";
     }
 
-    function cancelEdit() {
-      resetForm();
+    function resetForm() {
+      editingId = null;
+      document.getElementById("admin-form-title").textContent =
+        "Crear nuevo producto";
+      document.getElementById("admin-submit-btn").textContent =
+        "Guardar producto";
+
+      document.querySelector(".admin-form").reset();
+
+      document.getElementById("p-active").value = "true";
+      const msg = document.getElementById("admin-form-msg");
+      msg.textContent =
+        "Completá los datos y guardá. Los cambios se aplican en la tienda y en el flujo de mails.";
+      msg.className = "admin-message";
     }
 
-    function handleSubmitProduct(event) {
+    async function handleProductSubmit(event) {
       event.preventDefault();
 
-      const id = document.getElementById("p-id").value || null;
       const name = document.getElementById("p-name").value.trim();
       const priceUsd = parseFloat(
         document.getElementById("p-price").value || "0"
@@ -436,89 +571,120 @@
       const type = document.getElementById("p-type").value;
       const desc = document.getElementById("p-desc").value.trim();
       const img = document.getElementById("p-img").value.trim();
-      const isActive = document.getElementById("p-active").value === "true";
+      const deliveryValue = document
+        .getElementById("p-delivery-value")
+        .value.trim();
       const instructions = document
         .getElementById("p-instructions")
         .value.trim();
       const pdfUrl = document.getElementById("p-pdf").value.trim();
+      const emailSubject = document
+        .getElementById("p-email-subject")
+        .value.trim();
+      const emailBody = document
+        .getElementById("p-email-body")
+        .value.trim();
+      const isActive =
+        document.getElementById("p-active").value === "true";
 
       const price_cents = Math.round(priceUsd * 100);
 
       const payload = {
-        id: editingId || id || undefined,
         name,
         price_cents,
+        currency: "USD",
         type,
         short_description: desc,
         image_url: img,
         is_active: isActive,
+        // entrega
+        delivery_type: deliveryValue ? "link" : "none",
+        delivery_value: deliveryValue,
+        // instructivo y mail
         instructions,
         pdf_url: pdfUrl,
+        email_subject: emailSubject,
+        email_body: emailBody,
       };
 
+      if (editingId) {
+        payload.id = editingId;
+      }
+
       const msg = document.getElementById("admin-form-msg");
-      msg.textContent = "Guardando producto...";
+      msg.textContent = "Guardando...";
+      msg.className = "admin-message";
 
-      const method = editingId ? "PUT" : "POST";
+      try {
+        const method = editingId ? "PUT" : "POST";
 
-      fetch(`${API_BASE}/api/admin-products`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-token": ADMIN_TOKEN,
-        },
-        body: JSON.stringify(payload),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data || !data.ok) {
-            console.error("Error al guardar producto:", data);
-            msg.textContent = "Error al guardar producto.";
-            return;
-          }
-
-          msg.textContent = editingId
-            ? "Producto actualizado correctamente."
-            : "Producto creado correctamente.";
-
-          resetForm();
-          loadAdminProducts();
-        })
-        .catch((err) => {
-          console.error("Error fetch guardar producto:", err);
-          msg.textContent = "Error de conexión al guardar.";
+        const res = await fetch(`${API_BASE}/api/admin-products`, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": ADMIN_API_TOKEN,
+          },
+          body: JSON.stringify(payload),
         });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Error al guardar");
+        }
+
+        msg.textContent = "Producto guardado correctamente.";
+        msg.className = "admin-message ok";
+
+        // recargar listado
+        await loadAdminProducts();
+        // opcional: resetear formulario después de crear
+        // resetForm();
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "Error al guardar el producto.";
+        msg.className = "admin-message error";
+      }
     }
 
-    function deleteProduct(id) {
-      if (!confirm("¿Seguro que querés eliminar este producto?")) return;
+    async function deleteProduct(id) {
+      if (!confirm("¿Eliminar este producto? Esta acción no puede deshacerse.")) {
+        return;
+      }
 
       const msg = document.getElementById("admin-form-msg");
       msg.textContent = "Eliminando producto...";
+      msg.className = "admin-message";
 
-      fetch(`${API_BASE}/api/admin-products`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-token": ADMIN_TOKEN,
-        },
-        body: JSON.stringify({ id }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data || !data.ok) {
-            console.error("Error al eliminar producto:", data);
-            msg.textContent = "Error al eliminar producto.";
-            return;
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/admin-products?id=${encodeURIComponent(id)}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-token": ADMIN_API_TOKEN,
+            },
           }
-          msg.textContent = "Producto eliminado correctamente.";
-          if (editingId === id) resetForm();
-          loadAdminProducts();
-        })
-        .catch((err) => {
-          console.error("Error fetch eliminar producto:", err);
-          msg.textContent = "Error de conexión al eliminar.";
-        });
+        );
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Error al eliminar");
+        }
+
+        msg.textContent = "Producto eliminado correctamente.";
+        msg.className = "admin-message ok";
+
+        if (editingId === id) {
+          resetForm();
+        }
+
+        await loadAdminProducts();
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "Error al eliminar el producto.";
+        msg.className = "admin-message error";
+      }
     }
   </script>
 </body>
