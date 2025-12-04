@@ -44,6 +44,44 @@
       </span>
     </div>
 
+    <!-- DATOS DE CONTACTO -->
+    <section class="cart-checkout-form">
+      <h2>Datos de contacto</h2>
+
+      <div class="cart-form-row">
+        <label for="buyer-name">Nombre y apellido</label>
+        <input
+          id="buyer-name"
+          type="text"
+          placeholder="Ej: Rodrigo Pérez"
+          autocomplete="name"
+        >
+      </div>
+
+      <div class="cart-form-row">
+        <label for="buyer-email">Correo electrónico</label>
+        <input
+          id="buyer-email"
+          type="email"
+          placeholder="Ej: tucorreo@email.com"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="cart-form-row">
+        <label for="buyer-whatsapp">WhatsApp (con código de país)</label>
+        <input
+          id="buyer-whatsapp"
+          type="tel"
+          placeholder="Ej: +39 3520630409"
+          autocomplete="tel"
+          required
+        >
+        <small>Usamos este número solo para enviarte acceso y soporte del producto.</small>
+      </div>
+    </section>
+
     <!-- BOTÓN DE PAGO -->
     <div class="cart-actions">
       <button class="btn-primary cart-pay-btn" onclick="payWithStripe()">
