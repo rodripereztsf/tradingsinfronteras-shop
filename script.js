@@ -183,6 +183,48 @@ async function renderProductsOnHome() {
       "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
   }
 }
+// --- Validación de datos de contacto en el carrito ---
+
+const nameInput = document.getElementById("contact-name");
+const emailInput = document.getElementById("contact-email");
+const whatsappInput = document.getElementById("contact-whatsapp");
+const payButton = document.getElementById("pay-button");
+
+function isValidEmail(email) {
+  // Validación simple, suficiente para este caso
+  return /\S+@\S+\.\S+/.test(email);
+}
+
+function isValidWhatsapp(value) {
+  // Chequeo muy básico: que tenga al menos 8 caracteres y un número
+  return value.replace(/\D/g, "").length >= 8;
+}
+
+function updatePayButtonState() {
+  if (!nameInput || !emailInput || !whatsappInput || !payButton) return;
+
+  const nameOk = nameInput.value.trim().length > 2;
+  const emailOk = isValidEmail(emailInput.value.trim());
+  const whatsappOk = isValidWhatsapp(whatsappInput.value.trim());
+
+  const allOk = nameOk && emailOk && whatsappOk;
+
+  payButton.disabled = !allOk;
+  payButton.classList.toggle("btn-pay--disabled", !allOk);
+  payButton.classList.toggle("btn-pay--enabled", allOk);
+}
+
+// Escuchamos cambios en todos los campos
+if (nameInput && emailInput && whatsappInput) {
+  ["input", "blur"].forEach((evt) => {
+    nameInput.addEventListener(evt, updatePayButtonState);
+    emailInput.addEventListener(evt, updatePayButtonState);
+    whatsappInput.addEventListener(evt, updatePayButtonState);
+  });
+
+  // Estado inicial
+  updatePayButtonState();
+}
 
 // ===============================
 // STRIPE
