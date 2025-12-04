@@ -54,17 +54,17 @@ function addToCart(name, priceCents) {
   } else {
     cart.push({
       name,
-      price: priceCents,
+      price: priceCents, // en centavos
       quantity: 1,
     });
   }
 
   saveCartToStorage();
   updateCartBadge();
-  renderCartPage();
+  renderCartPage(); // si estás en cart.html, se actualiza la vista
 }
 
-// Eliminar producto del carrito
+// Eliminar producto por índice
 function removeFromCart(index) {
   if (!Array.isArray(cart)) return;
   if (index < 0 || index >= cart.length) return;
@@ -110,7 +110,9 @@ function renderCartPage() {
       </div>
       <div class="cart-item-meta">
         <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
-        <button class="cart-item-remove" onclick="removeFromCart(${index})">✕ Eliminar</button>
+        <button class="cart-item-remove" onclick="removeFromCart(${index})">
+          ✕ Eliminar
+        </button>
       </div>
     `;
 
@@ -121,7 +123,7 @@ function renderCartPage() {
 }
 
 // ===============================
-// RENDER DE PRODUCTOS EN HOME
+// RENDER DE PRODUCTOS (index.html)
 // ===============================
 
 async function renderProductsOnHome() {
@@ -137,10 +139,16 @@ async function renderProductsOnHome() {
     const data = await response.json();
 
     if (!data || !Array.isArray(data.products)) {
-      throw new Error("Respuesta inválida");
+      throw new Error("Respuesta inválida de /api/products");
     }
 
     const products = data.products;
+
+    if (!products.length) {
+      container.innerHTML = "<p>No hay productos disponibles.</p>";
+      return;
+    }
+
     container.innerHTML = "";
 
     products.forEach((product) => {
@@ -150,63 +158,29 @@ async function renderProductsOnHome() {
       card.innerHTML = `
         <h3>${product.name}</h3>
         <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
-        <p class="producto-texto">${product.short_description || ""}</p>
-        <button class="btn-secondary"
-          onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${product.price_cents})">
+        <p class="producto-texto">
+          ${product.short_description || ""}
+        </p>
+        <button
+          class="btn-secondary"
+          onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
+        product.price_cents
+      })">
           Agregar al carrito
         </button>
       `;
+
       container.appendChild(card);
     });
   } catch (err) {
-    console.error("Error:", err);
-    container.innerHTML = "<p>Error al cargar los productos.</p>";
+    console.error("Error cargando productos:", err);
+    container.innerHTML =
+      "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
   }
 }
 
 // ===============================
-// VALIDACIÓN — BOTÓN PAGAR
-// ===============================
-
-const nameInput = document.getElementById("contact-name");
-const emailInput = document.getElementById("contact-email");
-const whatsappInput = document.getElementById("contact-whatsapp");
-const payButton = document.getElementById("pay-button");
-
-function isValidEmail(email) {
-  return /\S+@\S+\.\S+/.test(email);
-}
-
-function isValidWhatsapp(value) {
-  return value.replace(/\D/g, "").length >= 8;
-}
-
-function updatePayButtonState() {
-  if (!nameInput || !emailInput || !whatsappInput || !payButton) return;
-
-  const nameOk = nameInput.value.trim().length > 2;
-  const emailOk = isValidEmail(emailInput.value.trim());
-  const whatsappOk = isValidWhatsapp(whatsappInput.value.trim());
-
-  const allOk = nameOk && emailOk && whatsappOk;
-
-  payButton.disabled = !allOk;
-  payButton.classList.toggle("btn-pay--disabled", !allOk);
-  payButton.classList.toggle("btn-pay--enabled", allOk);
-}
-
-if (nameInput && emailInput && whatsappInput) {
-  ["input", "blur"].forEach((evt) => {
-    nameInput.addEventListener(evt, updatePayButtonState);
-    emailInput.addEventListener(evt, updatePayButtonState);
-    whatsappInput.addEventListener(evt, updatePayButtonState);
-  });
-
-  updatePayButtonState();
-}
-
-// ===============================
-// STRIPE CHECKOUT
+// STRIPE
 // ===============================
 
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
@@ -219,18 +193,24 @@ async function payWithStripe() {
     return;
   }
 
-  const nameValue = nameInput?.value.trim();
-  const emailValue = emailInput?.value.trim();
-  const whatsappValue = whatsappInput?.value.trim();
+  const nameInput = document.getElementById("contact-name");
+  const emailInput = document.getElementById("contact-email");
+  const waInput = document.getElementById("contact-whatsapp");
 
-  if (!nameValue || !emailValue || !whatsappValue) {
-    alert("Por favor completá nombre, email y WhatsApp para continuar.");
+  const buyerName = (nameInput?.value || "").trim();
+  const buyerEmail = (emailInput?.value || "").trim();
+  const buyerWhatsApp = (waInput?.value || "").trim();
+
+  if (!buyerName || !buyerEmail || !buyerWhatsApp) {
+    alert("Completá nombre, email y WhatsApp para continuar.");
+    if (!buyerName && nameInput) nameInput.focus();
+    else if (!buyerEmail && emailInput) emailInput.focus();
+    else if (!buyerWhatsApp && waInput) waInput.focus();
     return;
   }
 
   try {
-    const successUrl =
-      window.location.origin + "/checkout-success-stripe.html";
+    const successUrl = window.location.origin + "/checkout-success-stripe.html";
     const cancelUrl = window.location.href;
 
     const payload = {
@@ -239,9 +219,9 @@ async function payWithStripe() {
         price: item.price,
         quantity: item.quantity || 1,
       })),
-      buyerName: nameValue,
-      buyerEmail: emailValue,
-      buyerWhatsApp: whatsappValue,
+      buyerName,
+      buyerEmail,
+      buyerWhatsApp,
       successUrl,
       cancelUrl,
     };
@@ -253,33 +233,74 @@ async function payWithStripe() {
     });
 
     const data = await response.json();
+    console.log("Stripe response:", data);
 
-    if (data?.url) {
+    if (data && data.url) {
       window.location.href = data.url;
-      return;
+    } else {
+      console.error("Respuesta Stripe inesperada:", data);
+      alert("No se pudo crear el pago con Stripe. Intenta nuevamente.");
     }
-
-    alert(
-      data?.message ||
-        data?.error ||
-        "No se pudo crear el pago con Stripe. Intenta nuevamente."
-    );
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error("Error al conectar con Stripe:", e);
     alert("Error al conectar con Stripe. Intenta nuevamente.");
   }
 }
 
 // ===============================
-// INICIALIZACIÓN
+// INICIALIZACIÓN + VALIDACIÓN FORM
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Año en el footer
   const yearEl = document.getElementById("year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
+  }
 
+  // Carrito
   loadCartFromStorage();
   updateCartBadge();
   renderCartPage();
   renderProductsOnHome();
+
+  // --- Validación de datos de contacto en carrito ---
+  const nameInput = document.getElementById("contact-name");
+  const emailInput = document.getElementById("contact-email");
+  const whatsappInput = document.getElementById("contact-whatsapp");
+  const payButton = document.getElementById("pay-button");
+
+  if (nameInput && emailInput && whatsappInput && payButton) {
+    const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
+    const isValidWhatsapp = (value) => value.replace(/\D/g, "").length >= 8;
+
+    const updatePayButtonState = () => {
+      const nameOk = nameInput.value.trim().length > 2;
+      const emailOk = isValidEmail(emailInput.value.trim());
+      const whatsappOk = isValidWhatsapp(whatsappInput.value.trim());
+
+      const allOk = nameOk && emailOk && whatsappOk;
+
+      payButton.disabled = !allOk;
+      payButton.classList.toggle("btn-pay--disabled", !allOk);
+      payButton.classList.toggle("btn-pay--enabled", allOk);
+    };
+
+    ["input", "blur"].forEach((evt) => {
+      nameInput.addEventListener(evt, updatePayButtonState);
+      emailInput.addEventListener(evt, updatePayButtonState);
+      whatsappInput.addEventListener(evt, updatePayButtonState);
+    });
+
+    // Estado inicial
+    updatePayButtonState();
+
+    // 👉 Aquí enganchamos el click del botón al pago
+    payButton.addEventListener("click", (e) => {
+      e.preventDefault(); // por si está dentro de un <form>
+      if (!payButton.disabled) {
+        payWithStripe();
+      }
+    });
+  }
 });
