@@ -751,3 +751,21 @@ header .logo-sub {
     grid-column: 1 / 2;
   }
 }
+.cart-summary {
+  margin-top: 24px;
+}
+
+.cart-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-summary-row + .cart-summary-row {
+  margin-top: 4px;
+}
+
+.cart-summary-row-ars {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
