@@ -1,115 +1,122 @@
-// api/stripe-webhook.js
-//
-// Webhook de Stripe para:
-// - checkout.session.completed  -> pago aprobado, enviamos producto
-// - payment_intent.succeeded    -> pago confirmado (extra seguridad)
-// - payment_intent.payment_failed -> más adelante: mail de pago rechazado
+import Stripe from "stripe";
+import fetch from "node-fetch";
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
-// Dominio base de tu deploy en Vercel
-const BASE_URL =
-  process.env.SELF_BASE_URL ||
-  "https://tradingsinfronteras-shop.vercel.app";
-
-module.exports = async (req, res) => {
-  if (req.method !== "POST") {
-    res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Method not allowed" }));
-  }
-
-  // ⚠️ En esta primera versión asumimos que Vercel ya nos da req.body como JSON.
-  // Stripe recomienda verificar la firma con el raw body.
-  // Cuando quieras, endurecemos esto con verificación de firma completa.
-  const event = req.body || {};
-
-  try {
-    const type = event.type;
-    console.log("Stripe webhook recibido:", type);
-
-    switch (type) {
-      case "checkout.session.completed": {
-        const session = event.data?.object || {};
-
-        const email =
-          session.customer_details?.email ||
-          session.customer_email ||
-          session.metadata?.buyer_email;
-
-        const metadata = session.metadata || {};
-        const productId = metadata.product_id; // lo vamos a setear desde create-stripe-checkout
-        const buyerName =
-          metadata.buyer_name ||
-          session.customer_details?.name ||
-          "trader";
-
-        console.log("SESSION COMPLETED:", {
-          email,
-          productId,
-          buyerName,
-        });
-
-        // Si no tenemos email o productId, no podemos enviar el acceso
-        if (!email || !productId) {
-          console.warn(
-            "Faltan datos para enviar email (email o product_id). No se envía nada."
-          );
-          break;
-        }
-
-        // Llamamos a nuestra propia API de email para reutilizar la lógica
-        const payload = {
-          email,
-          product_id: productId,
-          buyer_name: buyerName,
-        };
-
-        const resp = await fetch(`${BASE_URL}/api/email-send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await resp.json().catch(() => ({}));
-        console.log("Respuesta de /api/email-send:", data);
-
-        if (!resp.ok) {
-          console.error(
-            "Fallo al enviar email desde webhook:",
-            resp.status,
-            data
-          );
-        }
-        break;
-      }
-
-      case "payment_intent.succeeded": {
-        const intent = event.data?.object || {};
-        console.log("PaymentIntent succeeded:", intent.id);
-        // Acá podríamos hacer lógica extra si hiciera falta.
-        break;
-      }
-
-      case "payment_intent.payment_failed": {
-        const intent = event.data?.object || {};
-        const lastError = intent.last_payment_error;
-        console.warn("PaymentIntent FAILED:", intent.id, lastError?.message);
-        // Más adelante: acá podemos disparar un mail de "pago rechazado"
-        break;
-      }
-
-      default:
-        console.log("Evento Stripe no manejado:", type);
-    }
-
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ received: true }));
-  } catch (err) {
-    console.error("Error en stripe-webhook:", err);
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Webhook handler error" }));
-  }
+export const config = {
+  api: {
+    bodyParser: false,
+  },
 };
+
+function buffer(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Only POST allowed");
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const sig = req.headers["stripe-signature"];
+  const buf = await buffer(req);
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      buf,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("Webhook signature error:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // -------------------------------------------------------------
+  // MOSTRAR EVENTO EN CONSOLA (LOG)
+  // -------------------------------------------------------------
+  console.log("➡️ EVENT RECEIVED:", event.type);
+
+  // -------------------------------------------------------------
+  // EXTRAER MAIL + NOMBRE + PRODUCTO
+  // -------------------------------------------------------------
+  let email = null;
+  let buyer_name = null;
+  let product_id = null;
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+
+    email = session.customer_details?.email;
+    buyer_name = session.customer_details?.name || "cliente";
+
+    const line_items = await stripe.checkout.sessions.listLineItems(
+      session.id
+    );
+
+    product_id = line_items.data?.[0]?.price?.product || null;
+  }
+
+  // -------------------------------------------------------------
+  // ENVIAR DATOS A KOMMO
+  // -------------------------------------------------------------
+  async function sendToKommo(status_id) {
+    if (!email) return;
+
+    const url = `${process.env.KOMMO_BASE_URL}/api/v4/leads`;
+
+    const body = {
+      name: `Compra - ${email}`,
+      price: 0,
+      status_id: status_id,
+      pipeline_id: Number(process.env.KOMMO_PIPELINE_ID),
+      custom_fields_values: [
+        {
+          field_id: 123456, // si querés guardar mail en un campo personalizado
+          values: [{ value: email }],
+        },
+      ],
+    };
+
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.KOMMO_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([body]),
+    });
+  }
+
+  // -------------------------------------------------------------
+  // LÓGICA SEGÚN EVENTO
+  // -------------------------------------------------------------
+  switch (event.type) {
+    case "payment_intent.succeeded":
+    case "checkout.session.completed":
+      await sendToKommo(process.env.KOMMO_STATUS_ID_COMPLETADO);
+      break;
+
+    case "payment_intent.payment_failed":
+      await sendToKommo(process.env.KOMMO_STATUS_ID_RECHAZADO);
+      break;
+
+    case "checkout.session.async_payment_failed":
+      await sendToKommo(process.env.KOMMO_STATUS_ID_RECHAZADO);
+      break;
+
+    case "checkout.session.expired":
+      await sendToKommo(process.env.KOMMO_STATUS_ID_INCOMPLETO);
+      break;
+
+    default:
+      console.log("Evento no manejado:", event.type);
+  }
+
+  res.json({ received: true });
+}
