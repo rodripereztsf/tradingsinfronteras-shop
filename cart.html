@@ -45,42 +45,58 @@
     </div>
 
     <!-- DATOS DE CONTACTO -->
-    <section class="cart-checkout-form">
-      <h2>Datos de contacto</h2>
+<section class="cart-contact">
+  <h2 class="cart-contact-title">Datos de contacto</h2>
 
-      <div class="cart-form-row">
-        <label for="buyer-name">Nombre y apellido</label>
-        <input
-          id="buyer-name"
-          type="text"
-          placeholder="Ej: Rodrigo Pérez"
-          autocomplete="name"
-        >
-      </div>
+  <form id="checkout-form" class="cart-contact-form">
+    <div class="cart-contact-field">
+      <label for="contact-name">Nombre y apellido</label>
+      <input
+        id="contact-name"
+        type="text"
+        placeholder="Ej: Rodrigo Pérez"
+        required
+      />
+    </div>
 
-      <div class="cart-form-row">
-        <label for="buyer-email">Correo electrónico</label>
-        <input
-          id="buyer-email"
-          type="email"
-          placeholder="Ej: tucorreo@email.com"
-          autocomplete="email"
-          required
-        >
-      </div>
+    <div class="cart-contact-field">
+      <label for="contact-email">Correo electrónico</label>
+      <input
+        id="contact-email"
+        type="email"
+        placeholder="Ej: tucorreo@email.com"
+        required
+      />
+    </div>
 
-      <div class="cart-form-row">
-        <label for="buyer-whatsapp">WhatsApp (con código de país)</label>
-        <input
-          id="buyer-whatsapp"
-          type="tel"
-          placeholder="Ej: +39 3520630409"
-          autocomplete="tel"
-          required
-        >
-        <small>Usamos este número solo para enviarte acceso y soporte del producto.</small>
-      </div>
-    </section>
+    <div class="cart-contact-field">
+      <label for="contact-whatsapp">WhatsApp (con código de país)</label>
+      <input
+        id="contact-whatsapp"
+        type="tel"
+        placeholder="Ej: +39 3520630409"
+        required
+      />
+    </div>
+
+    <div class="cart-contact-actions">
+      <button
+        id="pay-button"
+        type="button"
+        class="btn-pay btn-pay--disabled"
+        disabled
+      >
+        PAGAR (ARS o USD)
+      </button>
+
+      <p class="cart-pay-note">
+        Podés pagar en Pesos Argentinos o en USD. El monto se calcula según el
+        valor del pedido en dólares.
+      </p>
+    </div>
+  </form>
+</section>
+
 
     <!-- BOTÓN DE PAGO -->
     <div class="cart-actions">
