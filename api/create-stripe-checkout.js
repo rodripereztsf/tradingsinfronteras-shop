@@ -2,17 +2,28 @@
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-// CORS abierto (después, si querés, lo limitamos al dominio de la tienda)
+// ---------------------------------------------------------
+// CORS (ajustá el origin si querés limitarlo solo a tu dominio)
+// ---------------------------------------------------------
 const setCors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://rodripereztst.github.io" // tu tienda en GitHub Pages
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
 };
 
 module.exports = async (req, res) => {
   setCors(res);
 
-  // Preflight
+  // Pre-flight CORS
   if (req.method === "OPTIONS") {
     res.statusCode = 200;
     return res.end();
@@ -26,13 +37,14 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // En Vercel a veces req.body llega como string
-    const body =
-      typeof req.body === "string"
-        ? JSON.parse(req.body || "{}")
-        : req.body || {};
-
-    const { items, successUrl, cancelUrl } = body;
+    const {
+      items,
+      successUrl,
+      cancelUrl,
+      buyerName,
+      buyerEmail,
+      buyerWhatsApp,
+    } = req.body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
       res.statusCode = 400;
@@ -40,18 +52,22 @@ module.exports = async (req, res) => {
       return res.end(JSON.stringify({ error: "Cart is empty" }));
     }
 
-    // En el front usamos precios en CENTAVOS reales (ej: 4900 = 49.00 USD)
-    // Así que acá NO convertimos nada: Stripe espera centavos → le mandamos tal cual.
+    // ⚠️ ESTE RATE TIENE QUE MATCHEAR CON EL DEL FRONT (script.js)
+    // Si tu precio en la tienda es "USD 149.90" y en el código lo manejás como 14990,
+    // este RATE = 1 / 1000 convierte 14990 -> 14.99 USD para Stripe.
+    const USD_RATE = 1 / 1000;
+
     const line_items = items.map((item, index) => {
       const name = item.name || `Producto ${index + 1}`;
-      const priceCents = Number(item.price) || 0;
-      const quantity = Number(item.quantity ?? item.qty ?? 1) || 1;
+      const priceNumber = Number(item.price) || 0;
+      const quantity =
+        Number(item.quantity ?? item.qty ?? 1) || 1;
 
       return {
         price_data: {
           currency: "usd",
           product_data: { name },
-          unit_amount: priceCents, // 4900 => 49.00 USD
+          unit_amount: Math.round(priceNumber * USD_RATE * 100), // en centavos
         },
         quantity,
       };
@@ -62,6 +78,12 @@ module.exports = async (req, res) => {
       line_items,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      customer_email: buyerEmail || undefined,
+      metadata: {
+        buyer_name: buyerName || "",
+        buyer_email: buyerEmail || "",
+        buyer_whatsapp: buyerWhatsApp || "",
+      },
     });
 
     res.statusCode = 200;
@@ -70,7 +92,6 @@ module.exports = async (req, res) => {
   } catch (err) {
     console.error("Stripe error:", err);
 
-    // Siempre respondemos JSON con CORS para que el front NO caiga en error de red
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
     return res.end(
