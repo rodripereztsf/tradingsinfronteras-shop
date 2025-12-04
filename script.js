@@ -183,7 +183,10 @@ async function renderProductsOnHome() {
       "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
   }
 }
-// --- Validación de datos de contacto en el carrito ---
+
+// ===============================
+// DATOS DE CONTACTO + VALIDACIÓN
+// ===============================
 
 const nameInput = document.getElementById("contact-name");
 const emailInput = document.getElementById("contact-email");
@@ -196,7 +199,7 @@ function isValidEmail(email) {
 }
 
 function isValidWhatsapp(value) {
-  // Chequeo muy básico: que tenga al menos 8 caracteres y un número
+  // Chequeo básico: que tenga al menos 8 dígitos numéricos
   return value.replace(/\D/g, "").length >= 8;
 }
 
@@ -214,8 +217,8 @@ function updatePayButtonState() {
   payButton.classList.toggle("btn-pay--enabled", allOk);
 }
 
-// Escuchamos cambios en todos los campos
-if (nameInput && emailInput && whatsappInput) {
+// Escuchamos cambios en todos los campos para habilitar/deshabilitar el botón
+if (nameInput && emailInput && whatsappInput && payButton) {
   ["input", "blur"].forEach((evt) => {
     nameInput.addEventListener(evt, updatePayButtonState);
     emailInput.addEventListener(evt, updatePayButtonState);
@@ -230,12 +233,14 @@ if (nameInput && emailInput && whatsappInput) {
 // STRIPE
 // ===============================
 
-// Cambiá esto por el dominio de tu backend en Vercel si fuera distinto
+// Dominio del backend en Vercel
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
-// Si en algún momento lo querés hacer relativo, podrías usar:
-// const API_BASE = "";
 
-async function payWithStripe() {
+// Función principal de checkout
+async function handleCheckout() {
+  // Seguridad: si el botón está deshabilitado, no hacemos nada
+  if (payButton && payButton.disabled) return;
+
   // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
 
@@ -244,64 +249,81 @@ async function payWithStripe() {
     return;
   }
 
-  // Leer datos del formulario
-  const nameInput = document.getElementById("buyer-name");
-  const emailInput = document.getElementById("buyer-email");
-  const waInput = document.getElementById("buyer-whatsapp");
-
-  const buyerName = (nameInput?.value || "").trim();
-  const buyerEmail = (emailInput?.value || "").trim();
-  const buyerWhatsApp = (waInput?.value || "").trim();
-
-  if (!buyerEmail || !buyerWhatsApp) {
-    alert("Por favor completá al menos tu email y tu WhatsApp para continuar.");
-    if (!buyerEmail && emailInput) emailInput.focus();
-    else if (!buyerWhatsApp && waInput) waInput.focus();
+  if (!nameInput || !emailInput || !whatsappInput) {
+    alert("No se encontraron los campos de contacto.");
     return;
   }
 
+  const customer_name = nameInput.value.trim();
+  const customer_email = emailInput.value.trim();
+  const customer_whatsapp = whatsappInput.value.trim();
+
+  // Doble validación por las dudas
+  if (
+    !customer_name ||
+    !isValidEmail(customer_email) ||
+    !isValidWhatsapp(customer_whatsapp)
+  ) {
+    alert("Por favor completá correctamente todos los datos de contacto.");
+    updatePayButtonState();
+    return;
+  }
+
+  // Armamos los ítems para el backend
+  const items = cart.map((item) => ({
+    name: item.name,
+    price_cents: item.price, // en centavos (así lo guardamos en el carrito)
+    quantity: item.quantity || 1,
+  }));
+
   try {
-    const successUrl = window.location.origin + "/checkout-success-stripe.html";
-    const cancelUrl = window.location.href;
+    if (payButton) payButton.disabled = true;
 
-    const payload = {
-      items: cart.map((item) => ({
-        name: item.name,
-        price: item.price,                 // en centavos (tu formato actual)
-        quantity: item.quantity || 1,
-      })),
-      buyerName,
-      buyerEmail,
-      buyerWhatsApp,
-      successUrl,
-      cancelUrl,
-    };
-
-    const response = await fetch(
-      `${API_BASE}/api/create-stripe-checkout`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
+    const response = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items,
+        customer_name,
+        customer_email,
+        customer_whatsapp,
+      }),
+    });
 
     const data = await response.json();
 
     console.log("Stripe response:", data);
 
-    if (data?.url) {
+    if (response.ok && data?.url) {
+      // Redirigimos al checkout de Stripe
       window.location.href = data.url;
     } else {
       console.error("Respuesta Stripe inesperada:", data);
-      alert("No se pudo crear el pago con Stripe.");
+      alert("No se pudo crear el pago con Stripe. Intenta nuevamente.");
+      if (payButton) {
+        payButton.disabled = false;
+        updatePayButtonState();
+      }
     }
   } catch (e) {
-    console.error(e);
-    alert("Error al conectar con Stripe.");
+    console.error("Error al conectar con Stripe:", e);
+    alert("Error al conectar con Stripe. Intenta nuevamente.");
+    if (payButton) {
+      payButton.disabled = false;
+      updatePayButtonState();
+    }
   }
 }
 
+// Si el botón existe, le enganchamos el click
+if (payButton) {
+  payButton.addEventListener("click", handleCheckout);
+}
+
+// Compatibilidad por si en el HTML sigue existiendo onclick="payWithStripe()"
+function payWithStripe() {
+  handleCheckout();
+}
 
 // ===============================
 // INICIALIZACIÓN
@@ -317,8 +339,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Cargar carrito y reflejar estado
   loadCartFromStorage();
   updateCartBadge();
-  renderCartPage();       // si estamos en cart.html
+  renderCartPage(); // si estamos en cart.html
 
   // Renderizar productos dinámicamente en index.html
   renderProductsOnHome(); // si estamos en index.html
+
+  // Asegurar estado correcto del botón al cargar
+  updatePayButtonState();
 });
