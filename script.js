@@ -4,6 +4,10 @@
 
 let cart = [];
 
+// Tipo de cambio de referencia para mostrar el equivalente en ARS
+// Cambiá este valor cuando quieras actualizarlo.
+const USD_TO_ARS = 1500; // EJEMPLO: 1 USD = 1500 ARS
+
 // Formatear precio desde centavos
 function formatUsdFromCents(cents) {
   const n = Number(cents || 0) / 100;
@@ -119,7 +123,17 @@ function renderCartPage() {
     itemsContainer.appendChild(div);
   });
 
-  totalSpan.textContent = (total / 100).toFixed(2);
+    const totalUsd = total / 100;
+  totalSpan.textContent = totalUsd.toFixed(2);
+
+  // Actualizamos el equivalente en ARS si existe el span
+  const totalArsSpan = document.getElementById("cart-total-ars");
+  if (totalArsSpan) {
+    const totalArs = Math.round(totalUsd * USD_TO_ARS);
+    totalArsSpan.textContent = totalArs.toLocaleString("es-AR");
+  }
+}
+
 }
 
 // ===============================
