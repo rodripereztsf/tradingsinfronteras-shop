@@ -1,23 +1,27 @@
-// api/stripe-webhook.js  (o checkout-success-handler.js)
+// api/stripe-webhook.js
 
-// 1) Stripe
 const Stripe = require("stripe");
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-// 2) Helpers Kommo
 const KOMMO_BASE_URL = (process.env.KOMMO_BASE_URL || "").replace(/\/$/, "");
 const KOMMO_API_TOKEN = process.env.KOMMO_API_TOKEN;
 const KOMMO_PIPELINE_ID = Number(process.env.KOMMO_PIPELINE_ID || 0);
 
-// IDs de etapas (los que ya cargaste en Vercel)
 const STATUS_INCOMPLETO = Number(process.env.KOMMO_STATUS_ID_INCOMPLETO || 0);
 const STATUS_RECHAZADO = Number(process.env.KOMMO_STATUS_ID_RECHAZADO || 0);
 const STATUS_COMPLETADO = Number(process.env.KOMMO_STATUS_ID_COMPLETADO || 0);
 const STATUS_GANADO = Number(process.env.KOMMO_STATUS_ID_GANADO || 0);
 const STATUS_PERDIDO = Number(process.env.KOMMO_STATUS_ID_PERDIDO || 0);
 
-// 👉 helper para crear el lead en Kommo
-async function createKommoLead({ statusId, email, name, amountUsd }) {
+// Opcionales: campos personalizados en Kommo (cuando los definas)
+const KOMMO_CF_EMAIL = process.env.KOMMO_CF_EMAIL
+  ? Number(process.env.KOMMO_CF_EMAIL)
+  : null;
+const KOMMO_CF_WHATSAPP = process.env.KOMMO_CF_WHATSAPP
+  ? Number(process.env.KOMMO_CF_WHATSAPP)
+  : null;
+
+async function createKommoLead({ statusId, email, name, amountUsd, whatsapp }) {
   if (!KOMMO_BASE_URL || !KOMMO_API_TOKEN || !KOMMO_PIPELINE_ID) {
     console.error("Faltan variables de entorno de Kommo");
     return;
@@ -29,13 +33,56 @@ async function createKommoLead({ statusId, email, name, amountUsd }) {
 
   const url = `${KOMMO_BASE_URL}/api/v4/leads`;
 
+  const customFields = [];
+
+  if (KOMMO_CF_EMAIL && email) {
+    customFields.push({
+      field_id: KOMMO_CF_EMAIL,
+      values: [{ value: email }],
+    });
+  }
+
+  if (KOMMO_CF_WHATSAPP && whatsapp) {
+    customFields.push({
+      field_id: KOMMO_CF_WHATSAPP,
+      values: [{ value: whatsapp }],
+    });
+  }
+
   const body = [
     {
       name: `Stripe · ${email}`,
-      price: amountUsd ? Math.round(amountUsd) : 0, // Kommo usa importe en la moneda de la cuenta
+      price: amountUsd ? Math.round(amountUsd) : 0,
       pipeline_id: KOMMO_PIPELINE_ID,
       status_id: statusId,
-      // 👇 después acá podemos agregar custom_fields para mail, teléfono, etc.
+      ...(customFields.length
+        ? { custom_fields_values: customFields }
+        : {}),
+      _embedded: {
+        contacts: [
+          {
+            name: name || "Cliente Stripe",
+            custom_fields_values: [
+              ...(whatsapp
+                ? [
+                    {
+                      field_code: "PHONE",
+                      values: [{ value: whatsapp, enum_code: "OTHER" }],
+                    },
+                  ]
+                : []),
+              ...(email
+                ? [
+                    {
+                      field_code: "EMAIL",
+                      values: [{ value: email, enum_code: "WORK" }],
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ],
+      },
     },
   ];
 
@@ -66,10 +113,10 @@ module.exports = async (req, res) => {
     return res.end("Method not allowed");
   }
 
-  // En Vercel el body ya viene parseado; si es string lo parseamos nosotros
   let event;
   try {
-    event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    event =
+      typeof req.body === "string" ? JSON.parse(req.body) : req.body;
   } catch (err) {
     console.error("Error parseando body de Stripe:", err);
     res.statusCode = 400;
@@ -82,75 +129,92 @@ module.exports = async (req, res) => {
 
     let email = null;
     let name = null;
+    let whatsapp = null;
     let amountTotalUsd = null;
     let statusId = null;
 
-    // 1) Pago completado (tarjetas/aprobado)
+    // 1) Pago completado
     if (
       type === "checkout.session.completed" ||
       type === "checkout.session.async_payment_succeeded"
     ) {
-      const session = event.data.object;
+      const session = event.data.object || {};
+      const md = session.metadata || {};
 
-      email = session.customer_details?.email;
-      name = session.customer_details?.name || "Cliente";
-      // Stripe envía el monto en centavos
+      email =
+        md.buyer_email ||
+        session.customer_details?.email ||
+        md.email ||
+        null;
+      name =
+        md.buyer_name ||
+        session.customer_details?.name ||
+        "Cliente Stripe";
+      whatsapp = md.buyer_whatsapp || null;
+
       amountTotalUsd = session.amount_total
         ? session.amount_total / 100
         : null;
 
       statusId = STATUS_COMPLETADO;
     }
-
     // 2) Pago expirado / abandonado
     else if (type === "checkout.session.expired") {
-      const session = event.data.object;
+      const session = event.data.object || {};
+      const md = session.metadata || {};
 
-      email = session.customer_details?.email;
-      name = session.customer_details?.name || "Cliente";
+      email =
+        md.buyer_email ||
+        session.customer_details?.email ||
+        md.email ||
+        null;
+      name =
+        md.buyer_name ||
+        session.customer_details?.name ||
+        "Cliente Stripe";
+      whatsapp = md.buyer_whatsapp || null;
+
       amountTotalUsd = session.amount_total
         ? session.amount_total / 100
         : null;
 
       statusId = STATUS_INCOMPLETO;
     }
-
     // 3) Pago rechazado
     else if (
       type === "checkout.session.async_payment_failed" ||
       type === "payment_intent.payment_failed"
     ) {
-      const obj = event.data.object;
+      const obj = event.data.object || {};
+      const md = obj.metadata || {};
 
-      // en payment_intent viene diferente
       email =
+        md.buyer_email ||
         obj.customer_email ||
         obj.receipt_email ||
         obj.charges?.data?.[0]?.billing_details?.email ||
         null;
-
       name =
+        md.buyer_name ||
         obj.charges?.data?.[0]?.billing_details?.name ||
         "Cliente Stripe";
+      whatsapp = md.buyer_whatsapp || null;
 
       const amountCents = obj.amount || obj.amount_received || null;
       amountTotalUsd = amountCents ? amountCents / 100 : null;
 
       statusId = STATUS_RECHAZADO;
-    }
-
-    // 4) Otros eventos → no hacemos nada
-    else {
+    } else {
       res.statusCode = 200;
       return res.end("Event ignored");
     }
 
-    // Creamos el lead en Kommo
     await createKommoLead({
       statusId,
       email,
       name,
       amountUsd: amountTotalUsd,
+      whatsapp,
     });
 
     res.statusCode = 200;
