@@ -202,24 +202,45 @@ async function payWithStripe() {
     return;
   }
 
+  // Leer datos del formulario
+  const nameInput = document.getElementById("buyer-name");
+  const emailInput = document.getElementById("buyer-email");
+  const waInput = document.getElementById("buyer-whatsapp");
+
+  const buyerName = (nameInput?.value || "").trim();
+  const buyerEmail = (emailInput?.value || "").trim();
+  const buyerWhatsApp = (waInput?.value || "").trim();
+
+  if (!buyerEmail || !buyerWhatsApp) {
+    alert("Por favor completá al menos tu email y tu WhatsApp para continuar.");
+    if (!buyerEmail && emailInput) emailInput.focus();
+    else if (!buyerWhatsApp && waInput) waInput.focus();
+    return;
+  }
+
   try {
     const successUrl = window.location.origin + "/checkout-success-stripe.html";
     const cancelUrl = window.location.href;
 
-    const response = await fetch(`${API_BASE}/api/create-stripe-checkout`,
+    const payload = {
+      items: cart.map((item) => ({
+        name: item.name,
+        price: item.price,                 // en centavos (tu formato actual)
+        quantity: item.quantity || 1,
+      })),
+      buyerName,
+      buyerEmail,
+      buyerWhatsApp,
+      successUrl,
+      cancelUrl,
+    };
+
+    const response = await fetch(
+      `${API_BASE}/api/create-stripe-checkout`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: cart.map((item) => ({
-            // mandamos info consistente con lo que realmente guardamos
-            name: item.name,
-            price: item.price,                 // en centavos
-            quantity: item.quantity || 1,      // 👈 USAMOS quantity REAL
-          })),
-          successUrl,
-          cancelUrl,
-        }),
+        body: JSON.stringify(payload),
       }
     );
 
@@ -228,9 +249,6 @@ async function payWithStripe() {
     console.log("Stripe response:", data);
 
     if (data?.url) {
-      // si querés limpiar el carrito al iniciar el pago, podés descomentar:
-      // cart = [];
-      // saveCartToStorage();
       window.location.href = data.url;
     } else {
       console.error("Respuesta Stripe inesperada:", data);
@@ -241,6 +259,7 @@ async function payWithStripe() {
     alert("Error al conectar con Stripe.");
   }
 }
+
 
 // ===============================
 // INICIALIZACIÓN
