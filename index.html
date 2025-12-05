@@ -1,110 +1,130 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Trading Sin Fronteras - SHOP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TRADING SIN FRONTERAS SHOP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- HEADER -->
+    <header class="tsf-header">
+      <div class="tsf-header-inner">
+        <a href="#top" class="logo-link">
+          <img src="logo-tsf.png" alt="TSF" class="logo-img" />
+          <div class="logo-text">
+            <span class="logo-title">TRADING SIN FRONTERAS</span>
+            <span class="logo-subtitle">SHOP</span>
+          </div>
+        </a>
 
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+        <nav class="nav">
+          <a href="#colecciones">Colecciones</a>
+          <a href="#destacados">Destacados</a>
+          <a href="#catalogo">Catálogo completo</a>
+          <button class="btn-cart" onclick="location.href='cart.html'">
+            Carrito (0)
+          </button>
+        </nav>
+      </div>
+    </header>
 
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-  <header class="tsf-header">
-    <div class="tsf-header-inner">
-
-      <a href="index.html" class="logo-link">
-        <img src="IMG_9274.PNG" alt="Trading Sin Fronteras" class="logo-img">
-        <div class="logo-text">
-          <span class="logo-title">TRADING SIN FRONTERAS</span>
-          <span class="logo-subtitle">SHOP</span>
+    <main id="top">
+      <!-- HERO -->
+      <section class="hero">
+        <div class="hero-content">
+          <h1>TRADING SIN FRONTERAS SHOP</h1>
+          <p>
+            Merch premium para traders sin fronteras. Remeras, mates, diarios,
+            cursos, indicadores y más.
+          </p>
+          <button
+            class="btn-primary"
+            onclick="document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' })"
+          >
+            Ver productos
+          </button>
         </div>
-      </a>
+      </section>
 
-      <nav class="nav">
-        <a href="#colecciones">Colecciones</a>
-        <a href="#destacados">Destacados</a>
-        <a href="#tsf">La comunidad</a>
-        <a href="cart.html" class="btn-cart">Carrito (0)</a>
-      </nav>
-    </div>
-  </header>
+      <!-- COLECCIONES -->
+      <section id="colecciones" class="section">
+        <h2 class="section-title">Colecciones</h2>
 
-  <main>
-    <section class="hero">
-      <div class="hero-content">
-        <h1>TRADING SIN FRONTERAS SHOP</h1>
-        <p>Merch premium para traders sin fronteras. Remeras, mates, cuadernos y más.</p>
-        <a href="#destacados" class="btn-primary">Ver productos</a>
-      </div>
-    </section>
+        <div class="grid-colecciones">
+          <a href="#cat-courses" class="coleccion-card">
+            <h3>Formaciones y cursos</h3>
+            <p>Programas completos de trading y alto rendimiento.</p>
+          </a>
 
-    <<section id="colecciones" class="section section-colecciones">
-  <h2 class="section-title">Colecciones</h2>
+          <a href="#cat-indicators" class="coleccion-card">
+            <h3>Indicadores</h3>
+            <p>Herramientas avanzadas para TradingView.</p>
+          </a>
 
-  <div class="colecciones-grid">
-    <!-- Cada tarjeta es un botón que hace scroll al catálogo -->
-    <a href="#cat-formaciones" class="coleccion-card">
-      <h3>Formaciones y cursos</h3>
-      <p>Programas completos de trading y alto rendimiento.</p>
-    </a>
+          <a href="#cat-bots" class="coleccion-card">
+            <h3>Bots y automatizaciones</h3>
+            <p>Robots optimizados para tus sesiones.</p>
+          </a>
 
-    <a href="#cat-indicadores" class="coleccion-card">
-      <h3>Indicadores</h3>
-      <p>Herramientas avanzadas para TradingView.</p>
-    </a>
+          <a href="#cat-physical" class="coleccion-card">
+            <h3>Merch &amp; productos físicos</h3>
+            <p>Remeras, mates, diarios y más para tu setup.</p>
+          </a>
+        </div>
+      </section>
 
-    <a href="#cat-bots" class="coleccion-card">
-      <h3>Bots y automatizaciones</h3>
-      <p>Robots optimizados para tus sesiones.</p>
-    </a>
+      <!-- DESTACADOS -->
+      <section id="destacados" class="section">
+        <h2 class="section-title">Productos destacados</h2>
+        <div id="products-grid" class="grid-productos">
+          <!-- Se rellena desde script.js -->
+        </div>
+      </section>
 
-    <a href="#cat-merch" class="coleccion-card">
-      <h3>Merch & productos físicos</h3>
-      <p>Remeras, mates, diarios y más para tu setup.</p>
-    </a>
-  </div>
-</section>
+      <!-- CATÁLOGO COMPLETO -->
+      <section id="catalogo" class="section section-catalogo">
+        <h2 class="section-title section-title-center">Catálogo completo</h2>
+        <p class="section-subtitle section-subtitle-center">
+          Explorá todos los productos de la tienda organizados por categoría.
+        </p>
 
+        <!-- Formaciones / Cursos -->
+        <div class="catalog-category" id="cat-courses">
+          <h3 class="catalog-category-title">Formaciones y cursos</h3>
+          <div id="grid-courses" class="grid-productos"></div>
+        </div>
 
-    <!-- PRODUCTOS DESTACADOS (DINÁMICOS) -->
-    <section id="destacados" class="section">
-      <h2>Productos destacados</h2>
-      <!-- Contenedor que se rellena desde script.js con la API de Vercel -->
-      <div id="products-grid" class="grid-productos">
-        <!-- Los productos se cargan dinámicamente -->
-      </div>
-    </section>
-<!-- CATÁLOGO COMPLETO POR CATEGORÍAS -->
-<section id="catalogo" class="section">
-  <h2 id="catalogo" class="catalogo-title">Catálogo completo</h2>
+        <!-- Indicadores -->
+        <div class="catalog-category" id="cat-indicators">
+          <h3 class="catalog-category-title">Indicadores</h3>
+          <div id="grid-indicators" class="grid-productos"></div>
+        </div>
 
-<section class="section-catalogo">
-  <h3 id="cat-formaciones" class="catalogo-subtitle">Formaciones y cursos</h3>
-  <!-- productos de formaciones... -->
+        <!-- Bots -->
+        <div class="catalog-category" id="cat-bots">
+          <h3 class="catalog-category-title">Bots y automatizaciones</h3>
+          <div id="grid-bots" class="grid-productos"></div>
+        </div>
 
-  <h3 id="cat-indicadores" class="catalogo-subtitle">Indicadores</h3>
-  <!-- productos de indicadores... -->
+        <!-- Físicos -->
+        <div class="catalog-category" id="cat-physical">
+          <h3 class="catalog-category-title">Merch &amp; productos físicos</h3>
+          <div id="grid-physical" class="grid-productos"></div>
+        </div>
 
-  <h3 id="cat-bots" class="catalogo-subtitle">Bots y automatizaciones</h3>
-  <!-- productos de bots... -->
+        <!-- Otros -->
+        <div class="catalog-category" id="cat-other">
+          <h3 class="catalog-category-title">Otros</h3>
+          <div id="grid-other" class="grid-productos"></div>
+        </div>
+      </section>
+    </main>
 
-  <h3 id="cat-merch" class="catalogo-subtitle">Merch & productos físicos</h3>
-  <!-- productos físicos... -->
-</section>
+    <footer class="tsf-footer">
+      © <span id="year"></span> TRADING SIN FRONTERAS SHOP
+    </footer>
 
-
-  <h3 id="cat-otros">Otros</h3>
-  <div id="grid-other" class="grid-productos"></div>
-</section>
-
-  </main>
-
-  <footer class="tsf-footer">
-    <p>© <span id="year"></span> TRADING SIN FRONTERAS SHOP</p>
-  </footer>
-
-  <script src="script.js"></script>
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>
