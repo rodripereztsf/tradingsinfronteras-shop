@@ -106,10 +106,18 @@ a {
   color: #000;
 }
 
+/* === BOTÓN SECUNDARIO / AGREGAR AL CARRITO – CELESTE TSF === */
 .btn-secondary {
   background: transparent;
-  border: 1px solid #D4AF37;
-  color: #D4AF37;
+  border: 1px solid #00CFFF;
+  color: #00CFFF;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-secondary:hover {
+  background: #00CFFF;
+  color: #000814;
+  transform: translateY(-1px);
 }
 
 .section {
@@ -175,6 +183,7 @@ a {
   font-size: .8rem;
   color: #777;
 }
+
 /* Logo estilo similar a la web oficial */
 .logo-link {
   display: flex;
@@ -206,6 +215,7 @@ a {
   font-size: 0.85rem;
   color: #00BFFF; /* celeste eléctrico TSF */
 }
+
 /* === Carrito === */
 .carrito-title {
   font-size: 2rem;
@@ -287,6 +297,7 @@ a {
   display: flex;
   gap: 0.75rem;
 }
+
 .grid-productos {
   display: grid;
   gap: 1.5rem;
@@ -303,6 +314,7 @@ a {
   color: #c3c3c3;
   margin-bottom: 0.8rem;
 }
+
 /* === Página de producto === */
 
 .product-layout {
@@ -321,6 +333,7 @@ a {
   width: 100%;
 }
 
+/* Placeholder / imagen de producto en cards / página */
 .product-image-placeholder {
   width: 100%;
   min-height: 260px;
@@ -378,6 +391,7 @@ a {
 .link-volver:hover {
   opacity: 1;
 }
+
 /* === Checkout === */
 
 .checkout-intro {
@@ -420,6 +434,7 @@ a {
   flex-wrap: wrap;
   gap: 0.75rem;
 }
+
 /* === Métodos de pago === */
 
 .payment-box {
@@ -455,51 +470,55 @@ a {
 .payment-amount span {
   color: #00BFFF;
 }
+
 /* === FIX GLOBAL PARA UNIFICAR HEADER === */
 header.tsf-header {
-    padding: 20px 40px !important;
+  padding: 20px 40px !important;
 }
 
 .tsf-header-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .logo-main {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 .logo-sub {
-    font-size: 13px;
-    font-weight: 600;
-    color: #00CFFF; /* celeste oficial TSF */
+  font-size: 13px;
+  font-weight: 600;
+  color: #00CFFF; /* celeste oficial TSF */
 }
+
 /* Color correcto celeste TSF */
 .logo-sub {
-    color: #00CFFF !important;
+  color: #00CFFF !important;
 }
+
 /* Ajuste de tamaño y separación del logo */
 header .logo img {
-    height: 32px !important;
-    width: auto !important;
+  height: 32px !important;
+  width: auto !important;
 }
 
 header .logo-main {
-    font-size: 20px !important;
+  font-size: 20px !important;
 }
 
 header .logo-sub {
-    font-size: 12.5px !important;
+  font-size: 12.5px !important;
 }
+
 /* ===========================
    CARRITO
    =========================== */
@@ -606,7 +625,7 @@ header .logo-sub {
   min-width: 260px;
 }
 
-/* Responsive */
+/* Responsive carrito */
 @media (max-width: 768px) {
   .cart-item {
     flex-direction: column;
@@ -627,6 +646,7 @@ header .logo-sub {
     justify-content: flex-start;
   }
 }
+
 /* ===== Carrito – Datos de contacto ===== */
 
 .cart-contact {
@@ -751,6 +771,7 @@ header .logo-sub {
     grid-column: 1 / 2;
   }
 }
+
 .cart-summary {
   margin-top: 24px;
 }
@@ -768,4 +789,65 @@ header .logo-sub {
 .cart-summary-row-ars {
   font-size: 0.85rem;
   opacity: 0.8;
+}
+
+/* =========================================
+   AJUSTES DE COLECCIONES Y CATÁLOGO
+   ========================================= */
+
+/* Tarjetas de COLECCIONES – borde celeste suave y clickeables */
+.grid-colecciones .card {
+  border: 1px solid rgba(0, 207, 255, 0.25);
+  background: radial-gradient(circle at top left, rgba(0, 207, 255, 0.08), #050505 60%);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease, background 0.2s ease;
+}
+
+.grid-colecciones .card:hover {
+  border-color: rgba(0, 207, 255, 0.6);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
+  transform: translateY(-2px);
+}
+
+/* Título "Catálogo completo" más grande y centrado */
+#catalogo,
+#catalogo-completo {
+  text-align: center;
+}
+
+#catalogo h2,
+#catalogo-completo h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 2.2rem;
+}
+
+/* Subtítulos de bloques de catálogo en celeste */
+.catalogo-bloque-titulo,
+.catalogo-category-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #00CFFF;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+/* Contenedor de cada bloque de catálogo (por categoría) */
+.catalogo-bloque {
+  margin-bottom: 2.5rem;
+}
+
+/* Imagen dentro de cada producto del catálogo */
+.producto-img {
+  width: 100%;
+  border-radius: 0.75rem;
+  margin-bottom: 0.9rem;
+  object-fit: cover;
+  max-height: 220px;
+  border: 1px solid #111;
+}
+
+/* Opcional: centrar un poco más el contenido de las cards de productos */
+.producto h3 {
+  margin-bottom: 0.4rem;
 }
