@@ -55,17 +55,17 @@ function addToCart(name, priceCents) {
   } else {
     cart.push({
       name,
-      price: priceCents,
+      price: priceCents, // en centavos
       quantity: 1,
     });
   }
 
   saveCartToStorage();
   updateCartBadge();
-  renderCartPage();
+  renderCartPage(); // si estamos en cart.html, se actualiza la vista
 }
 
-// Eliminar producto
+// Eliminar producto por índice
 function removeFromCart(index) {
   if (!Array.isArray(cart)) return;
   if (index < 0 || index >= cart.length) return;
@@ -84,12 +84,14 @@ function renderCartPage() {
   const itemsContainer = document.getElementById("cart-items");
   const totalSpan = document.getElementById("cart-total");
 
+  // Si no estamos en cart.html, no hace nada
   if (!itemsContainer || !totalSpan) return;
 
   itemsContainer.innerHTML = "";
 
   if (!cart || cart.length === 0) {
-    itemsContainer.innerHTML = `<p class="cart-empty">Tu carrito está vacío.</p>`;
+    itemsContainer.innerHTML =
+      '<p class="cart-empty">Tu carrito está vacío.</p>';
     totalSpan.textContent = "0.00";
     return;
   }
@@ -97,7 +99,7 @@ function renderCartPage() {
   let total = 0;
 
   cart.forEach((item, index) => {
-    const itemTotal = item.price * (item.quantity || 1);
+    const itemTotal = (item.price || 0) * (item.quantity || 1);
     total += itemTotal;
 
     const div = document.createElement("div");
@@ -106,11 +108,15 @@ function renderCartPage() {
     div.innerHTML = `
       <div class="cart-item-info">
         <h3 class="cart-item-name">${item.name}</h3>
-        <p class="cart-item-qty">Cantidad: <span>${item.quantity}</span></p>
+        <p class="cart-item-qty">Cantidad: <span>${
+          item.quantity
+        }</span></p>
       </div>
       <div class="cart-item-meta">
         <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
-        <button class="cart-item-remove" onclick="removeFromCart(${index})">✕ Eliminar</button>
+        <button class="cart-item-remove" onclick="removeFromCart(${index})">
+          ✕ Eliminar
+        </button>
       </div>
     `;
 
@@ -121,11 +127,12 @@ function renderCartPage() {
 }
 
 // ===============================
-// FETCH DE PRODUCTOS
+// FETCH GENERAL DE PRODUCTOS
 // ===============================
 
 async function fetchAllProducts() {
-  if (allProducts.length) return allProducts;
+  // Si ya los cargamos, devolvemos cache
+  if (allProducts && allProducts.length) return allProducts;
 
   const url = "https://tradingsinfronteras-shop.vercel.app/api/products";
 
@@ -146,16 +153,17 @@ async function fetchAllProducts() {
 
 function renderFeaturedProducts(products) {
   const container = document.getElementById("products-grid");
-  if (!container) return;
+  if (!container) return; // por si no estamos en index
 
   container.innerHTML = "<p>Cargando productos...</p>";
 
+  // Solo los que estén marcados como destacados y activos
   const featured = products.filter(
-    (p) => p.is_featured !== false && p.is_active !== false
+    (p) => p.is_featured === true && p.is_active !== false
   );
 
   if (!featured.length) {
-    container.innerHTML = "<p>No hay productos destacados.</p>";
+    container.innerHTML = "<p>No hay productos destacados cargados.</p>";
     return;
   }
 
@@ -165,12 +173,20 @@ function renderFeaturedProducts(products) {
     const card = document.createElement("article");
     card.className = "producto";
 
+    const imgHtml = product.image_url
+      ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" />`
+      : "";
+
     card.innerHTML = `
+      ${imgHtml}
       <h3>${product.name}</h3>
       <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
       <p class="producto-texto">${product.short_description || ""}</p>
-      <button class="btn-secondary"
-        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${product.price_cents})">
+      <button
+        class="btn-secondary"
+        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
+      product.price_cents
+    })">
         Agregar al carrito
       </button>
     `;
@@ -184,7 +200,7 @@ function renderFeaturedProducts(products) {
 // ===============================
 
 function renderProductsByCategory(products) {
-  const containers = {
+  const containersMap = {
     course: "grid-courses",
     indicator: "grid-indicators",
     bot: "grid-bots",
@@ -192,29 +208,44 @@ function renderProductsByCategory(products) {
     other: "grid-other",
   };
 
-  const exists = Object.values(containers).some((id) => document.getElementById(id));
-  if (!exists) return;
+  // Si no existe ningún contenedor, no hacemos nada (por si no estamos en index)
+  const anyContainerExists = Object.values(containersMap).some(
+    (id) => document.getElementById(id) !== null
+  );
+  if (!anyContainerExists) return;
 
-  Object.values(containers).forEach((id) => {
+  // Limpiamos todos los contenedores
+  Object.values(containersMap).forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = "";
   });
 
+  // Solo productos activos
   const activos = products.filter((p) => p.is_active !== false);
 
   activos.forEach((product) => {
-    const container = document.getElementById(containers[product.type] || containers.other);
+    const type = product.type || "other";
+    const containerId = containersMap[type] || containersMap.other;
+    const container = document.getElementById(containerId);
     if (!container) return;
 
     const card = document.createElement("article");
     card.className = "producto";
 
+    const imgHtml = product.image_url
+      ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" />`
+      : "";
+
     card.innerHTML = `
+      ${imgHtml}
       <h3>${product.name}</h3>
       <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
       <p class="producto-texto">${product.short_description || ""}</p>
-      <button class="btn-secondary"
-        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${product.price_cents})">
+      <button
+        class="btn-secondary"
+        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
+      product.price_cents
+    })">
         Agregar al carrito
       </button>
     `;
@@ -222,32 +253,44 @@ function renderProductsByCategory(products) {
     container.appendChild(card);
   });
 
-  Object.entries(containers).forEach(([key, id]) => {
-    const el = document.getElementById(id);
-    if (el && el.children.length === 0) {
+  // Si alguna categoría quedó vacía, mostramos "Próximamente..."
+  Object.entries(containersMap).forEach(([_, id]) => {
+    const container = document.getElementById(id);
+    if (!container) return;
+
+    if (!container.children.length) {
       const p = document.createElement("p");
       p.className = "cat-empty";
       p.textContent = "Próximamente...";
-      el.appendChild(p);
+      container.appendChild(p);
     }
   });
 }
 
-// Inicializa todo el sistema de productos
+// Inicializador de todo el catálogo
 async function initProducts() {
   try {
     const products = await fetchAllProducts();
-    renderFeaturedProducts(products);
+
+    // Si existe la sección de destacados, la rellenamos
+    if (document.getElementById("products-grid")) {
+      renderFeaturedProducts(products);
+    }
+
+    // Si existe el catálogo por categoría, lo rellenamos
     renderProductsByCategory(products);
-  } catch (e) {
-    console.error("Error cargando productos:", e);
-    const c = document.getElementById("products-grid");
-    if (c) c.innerHTML = "<p>Error al cargar productos.</p>";
+  } catch (err) {
+    console.error("Error general cargando productos:", err);
+    const featuredContainer = document.getElementById("products-grid");
+    if (featuredContainer) {
+      featuredContainer.innerHTML =
+        "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
+    }
   }
 }
 
 // ===============================
-// VALIDACIÓN DATOS DE CONTACTO
+// VALIDACIÓN DATOS DE CONTACTO (cart.html)
 // ===============================
 
 const nameInput = document.getElementById("buyer-name");
@@ -259,21 +302,22 @@ function isValidEmail(email) {
   return /\S+@\S+\.\S+/.test(email);
 }
 
-function isValidWhatsapp(v) {
-  return v.replace(/\D/g, "").length >= 8;
+function isValidWhatsapp(value) {
+  return value.replace(/\D/g, "").length >= 8;
 }
 
 function updatePayButtonState() {
   if (!nameInput || !emailInput || !whatsappInput || !payButton) return;
 
-  const ok =
-    nameInput.value.trim().length > 2 &&
-    isValidEmail(emailInput.value.trim()) &&
-    isValidWhatsapp(whatsappInput.value.trim());
+  const nameOk = nameInput.value.trim().length > 2;
+  const emailOk = isValidEmail(emailInput.value.trim());
+  const whatsappOk = isValidWhatsapp(whatsappInput.value.trim());
 
-  payButton.disabled = !ok;
-  payButton.classList.toggle("btn-pay--disabled", !ok);
-  payButton.classList.toggle("btn-pay--enabled", ok);
+  const allOk = nameOk && emailOk && whatsappOk;
+
+  payButton.disabled = !allOk;
+  payButton.classList.toggle("btn-pay--disabled", !allOk);
+  payButton.classList.toggle("btn-pay--enabled", allOk);
 }
 
 if (nameInput && emailInput && whatsappInput) {
@@ -293,16 +337,17 @@ if (nameInput && emailInput && whatsappInput) {
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 async function payWithStripe() {
+  // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
 
-  if (!cart.length) {
+  if (!cart || cart.length === 0) {
     alert("Tu carrito está vacío.");
     return;
   }
 
-  const buyerName = nameInput?.value.trim();
-  const buyerEmail = emailInput?.value.trim();
-  const buyerWhatsApp = whatsappInput?.value.trim();
+  const buyerName = (nameInput?.value || "").trim();
+  const buyerEmail = (emailInput?.value || "").trim();
+  const buyerWhatsApp = (whatsappInput?.value || "").trim();
 
   if (!buyerName || !buyerEmail || !buyerWhatsApp) {
     alert("Completá nombre, email y WhatsApp para continuar.");
@@ -310,60 +355,44 @@ async function payWithStripe() {
   }
 
   try {
+    const successUrl =
+      window.location.origin + "/checkout-success-stripe.html";
+    const cancelUrl = window.location.href;
+
     const payload = {
-      items: cart.map((i) => ({
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity || 1,
+      items: cart.map((item) => ({
+        name: item.name,
+        price: item.price, // en centavos
+        quantity: item.quantity || 1,
       })),
       buyerName,
       buyerEmail,
       buyerWhatsApp,
-      successUrl: window.location.origin + "/checkout-success-stripe.html",
-      cancelUrl: window.location.href,
+      successUrl,
+      cancelUrl,
     };
 
-    const res = await fetch(`${API_BASE}/api/create-stripe-checkout`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+      `${API_BASE}/api/create-stripe-checkout`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
-    const data = await res.json();
+    const data = await response.json();
 
-    if (data?.url) window.location.href = data.url;
-    else {
-      console.error(data);
-      alert("No se pudo crear el pago.");
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      console.error("Respuesta Stripe inesperada:", data);
+      alert("No se pudo crear el pago con Stripe. Intentá nuevamente.");
     }
   } catch (e) {
     console.error(e);
-    alert("Error al conectar con Stripe.");
+    alert("Error al conectar con Stripe. Intentá nuevamente.");
   }
-}
-
-// ===============================
-// SCROLL DESDE COLECCIONES
-// ===============================
-
-function initCollectionScrollLinks() {
-  const links = document.querySelectorAll("[data-coleccion-target]");
-
-  links.forEach((el) => {
-    el.style.cursor = "pointer";
-
-    el.addEventListener("click", () => {
-      const target = el.getAttribute("data-coleccion-target");
-      const section = document.getElementById(target);
-
-      if (section) {
-        section.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    });
-  });
 }
 
 // ===============================
@@ -371,13 +400,17 @@ function initCollectionScrollLinks() {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Año en el footer
   const yearEl = document.getElementById("year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
+  }
 
+  // Cargar carrito y reflejar estado
   loadCartFromStorage();
   updateCartBadge();
-  renderCartPage();
+  renderCartPage(); // si estamos en cart.html
 
+  // Renderizar productos dinámicamente (si estamos en index.html habrá contenedores)
   initProducts();
-  initCollectionScrollLinks();
 });
