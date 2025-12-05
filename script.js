@@ -3,6 +3,7 @@
 // ===============================
 
 let cart = [];
+let allProducts = [];
 
 // Formatear precio desde centavos
 function formatUsdFromCents(cents) {
@@ -54,14 +55,14 @@ function addToCart(name, priceCents) {
   } else {
     cart.push({
       name,
-      price: priceCents,
+      price: priceCents, // en centavos
       quantity: 1,
     });
   }
 
   saveCartToStorage();
   updateCartBadge();
-  renderCartPage();
+  renderCartPage(); // si estamos en cart.html, se actualiza la vista
 }
 
 // Eliminar producto por índice
@@ -83,6 +84,7 @@ function renderCartPage() {
   const itemsContainer = document.getElementById("cart-items");
   const totalSpan = document.getElementById("cart-total");
 
+  // Si no estamos en cart.html, no hace nada
   if (!itemsContainer || !totalSpan) return;
 
   itemsContainer.innerHTML = "";
@@ -125,64 +127,155 @@ function renderCartPage() {
 }
 
 // ===============================
-// RENDER DE PRODUCTOS (index.html)
+// FETCH GENERAL DE PRODUCTOS
 // ===============================
 
-async function renderProductsOnHome() {
+async function fetchAllProducts() {
+  // si ya los cargamos, devolvemos cache
+  if (allProducts && allProducts.length) return allProducts;
+
+  const url =
+    "https://tradingsinfronteras-shop.vercel.app/api/products";
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data || !Array.isArray(data.products)) {
+    throw new Error("Respuesta inválida de /api/products");
+  }
+
+  allProducts = data.products;
+  return allProducts;
+}
+
+// ===============================
+// RENDER: PRODUCTOS DESTACADOS
+// ===============================
+
+function renderFeaturedProducts(products) {
   const container = document.getElementById("products-grid");
-  if (!container) return;
+  if (!container) return; // por si en alguna página no existe
 
   container.innerHTML = "<p>Cargando productos...</p>";
 
-  try {
-    const response = await fetch(
-      "https://tradingsinfronteras-shop.vercel.app/api/products"
-    );
-    const data = await response.json();
+  const featured = products.filter(
+    (p) => p.is_featured !== false && p.is_active !== false
+  );
 
-    if (!data || !Array.isArray(data.products)) {
-      throw new Error("Respuesta inválida de /api/products");
-    }
-
-    // 👇 Solo productos destacados (= is_featured !== false)
-    const products = data.products.filter(
-      (p) => p.is_featured !== false && p.is_active !== false
-    );
-
-    if (!products.length) {
-      container.innerHTML =
-        "<p>No hay productos destacados cargados.</p>";
-      return;
-    }
-
-    container.innerHTML = "";
-
-    products.forEach((product) => {
-      const card = document.createElement("article");
-      card.className = "producto";
-
-      card.innerHTML = `
-        <h3>${product.name}</h3>
-        <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
-        <p class="producto-texto">${
-          product.short_description || ""
-        }</p>
-        <button
-          class="btn-secondary"
-          onclick="addToCart('${product.name.replace(
-            /'/g,
-            "\\'"
-          )}', ${product.price_cents})">
-          Agregar al carrito
-        </button>
-      `;
-
-      container.appendChild(card);
-    });
-  } catch (err) {
-    console.error("Error cargando productos:", err);
+  if (!featured.length) {
     container.innerHTML =
-      "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
+      "<p>No hay productos destacados cargados.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  featured.forEach((product) => {
+    const card = document.createElement("article");
+    card.className = "producto";
+
+    card.innerHTML = `
+      <h3>${product.name}</h3>
+      <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
+      <p class="producto-texto">${
+        product.short_description || ""
+      }</p>
+      <button
+        class="btn-secondary"
+        onclick="addToCart('${product.name.replace(
+          /'/g,
+          "\\'"
+        )}', ${product.price_cents})">
+        Agregar al carrito
+      </button>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+// ===============================
+// RENDER: CATÁLOGO POR CATEGORÍAS
+// ===============================
+
+function renderProductsByCategory(products) {
+  const containersMap = {
+    course: "grid-courses",
+    indicator: "grid-indicators",
+    bot: "grid-bots",
+    physical: "grid-physical",
+    other: "grid-other",
+  };
+
+  // Si no existe ninguno de estos contenedores, no hacemos nada
+  const anyContainerExists = Object.values(containersMap).some(
+    (id) => document.getElementById(id) !== null
+  );
+  if (!anyContainerExists) return;
+
+  // Limpiamos todos los contenedores
+  Object.values(containersMap).forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+
+  const activos = products.filter((p) => p.is_active !== false);
+
+  activos.forEach((product) => {
+    const containerId =
+      containersMap[product.type] || containersMap.other;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const card = document.createElement("article");
+    card.className = "producto";
+
+    card.innerHTML = `
+      <h3>${product.name}</h3>
+      <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
+      <p class="producto-texto">${
+        product.short_description || ""
+      }</p>
+      <button
+        class="btn-secondary"
+        onclick="addToCart('${product.name.replace(
+          /'/g,
+          "\\'"
+        )}', ${product.price_cents})">
+        Agregar al carrito
+      </button>
+    `;
+
+    container.appendChild(card);
+  });
+
+  // Si alguna categoría quedó vacía, mostramos mensaje "Próximamente..."
+  Object.entries(containersMap).forEach(([key, id]) => {
+    const container = document.getElementById(id);
+    if (!container) return;
+
+    if (!container.children.length) {
+      const p = document.createElement("p");
+      p.className = "cat-empty";
+      p.textContent = "Próximamente...";
+      container.appendChild(p);
+    }
+  });
+}
+
+// Inicializador de todo el catálogo
+async function initProducts() {
+  try {
+    const products = await fetchAllProducts();
+    renderFeaturedProducts(products);
+    renderProductsByCategory(products);
+  } catch (err) {
+    console.error("Error general cargando productos:", err);
+    const featuredContainer = document.getElementById("products-grid");
+    if (featuredContainer) {
+      featuredContainer.innerHTML =
+        "<p>Error al cargar los productos. Intentá nuevamente más tarde.</p>";
+    }
   }
 }
 
@@ -217,12 +310,15 @@ function updatePayButtonState() {
   payButton.classList.toggle("btn-pay--enabled", allOk);
 }
 
+// Escuchamos cambios en todos los campos (solo existe en cart.html)
 if (nameInput && emailInput && whatsappInput) {
   ["input", "blur"].forEach((evt) => {
     nameInput.addEventListener(evt, updatePayButtonState);
     emailInput.addEventListener(evt, updatePayButtonState);
     whatsappInput.addEventListener(evt, updatePayButtonState);
   });
+
+  // Estado inicial
   updatePayButtonState();
 }
 
@@ -233,6 +329,7 @@ if (nameInput && emailInput && whatsappInput) {
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 async function payWithStripe() {
+  // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
 
   if (!cart || cart.length === 0) {
@@ -257,7 +354,7 @@ async function payWithStripe() {
     const payload = {
       items: cart.map((item) => ({
         name: item.name,
-        price: item.price,
+        price: item.price, // en centavos
         quantity: item.quantity || 1,
       })),
       buyerName,
@@ -295,13 +392,17 @@ async function payWithStripe() {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Año en el footer
   const yearEl = document.getElementById("year");
   if (yearEl) {
     yearEl.textContent = new Date().getFullYear();
   }
 
+  // Cargar carrito y reflejar estado
   loadCartFromStorage();
   updateCartBadge();
-  renderCartPage();
-  renderProductsOnHome();
+  renderCartPage(); // si estamos en cart.html
+
+  // Renderizar productos dinámicamente (si estamos en index.html habrá contenedores)
+  initProducts();
 });
