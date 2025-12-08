@@ -270,6 +270,30 @@ async function initProducts() {
 }
 
 // ===============================
+// HELPERS CHECKOUT (IDs flexibles)
+// ===============================
+
+function getCheckoutElements() {
+  const nameInput =
+    document.getElementById("buyer-name") ||
+    document.getElementById("contact-name");
+
+  const emailInput =
+    document.getElementById("buyer-email") ||
+    document.getElementById("contact-email");
+
+  const whatsappInput =
+    document.getElementById("buyer-whatsapp") ||
+    document.getElementById("contact-whatsapp");
+
+  const payButton =
+    document.getElementById("pay-button") ||
+    document.querySelector("[data-role='pay-button']");
+
+  return { nameInput, emailInput, whatsappInput, payButton };
+}
+
+// ===============================
 // VALIDACIÓN DATOS DE CONTACTO (solo cart.html)
 // ===============================
 
@@ -282,10 +306,8 @@ function isValidWhatsapp(value) {
 }
 
 function initCheckoutValidation() {
-  const nameInput = document.getElementById("buyer-name");
-  const emailInput = document.getElementById("buyer-email");
-  const whatsappInput = document.getElementById("buyer-whatsapp");
-  const payButton = document.getElementById("pay-button");
+  const { nameInput, emailInput, whatsappInput, payButton } =
+    getCheckoutElements();
 
   // Si no estamos en cart.html, no hacemos nada
   if (!nameInput || !emailInput || !whatsappInput || !payButton) return;
@@ -319,10 +341,8 @@ function initCheckoutValidation() {
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 async function payWithStripe() {
-  // Releemos los elementos SIEMPRE desde el DOM
-  const nameInput = document.getElementById("buyer-name");
-  const emailInput = document.getElementById("buyer-email");
-  const whatsappInput = document.getElementById("buyer-whatsapp");
+  // Siempre traemos los elementos actuales del DOM
+  const { nameInput, emailInput, whatsappInput } = getCheckoutElements();
 
   // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
@@ -371,8 +391,7 @@ async function payWithStripe() {
     const data = await response.json();
 
     if (data?.url) {
-      // 👇 REDIRECCIÓN A STRIPE
-      window.location.href = data.url;
+      window.location.href = data.url; // redirección a Stripe
     } else {
       console.error("Respuesta Stripe inesperada:", data);
       alert("No se pudo crear el pago con Stripe. Intentá nuevamente.");
