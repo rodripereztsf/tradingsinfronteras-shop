@@ -62,7 +62,7 @@ function addToCart(name, priceCents) {
 
   saveCartToStorage();
   updateCartBadge();
-  renderCartPage(); // si estamos en cart.html, se actualiza la vista
+  renderCartPage(); // si estás en cart.html, se actualiza la vista
 }
 
 // Eliminar producto por índice
@@ -131,10 +131,11 @@ function renderCartPage() {
 // ===============================
 
 async function fetchAllProducts() {
-  // Si ya los cargamos, devolvemos cache
+  // si ya los cargamos, devolvemos cache
   if (allProducts && allProducts.length) return allProducts;
 
-  const url = "https://tradingsinfronteras-shop.vercel.app/api/products";
+  const url =
+    "https://tradingsinfronteras-shop.vercel.app/api/products";
 
   const res = await fetch(url);
   const data = await res.json();
@@ -153,17 +154,17 @@ async function fetchAllProducts() {
 
 function renderFeaturedProducts(products) {
   const container = document.getElementById("products-grid");
-  if (!container) return; // por si no estamos en index
+  if (!container) return; // por si en alguna página no existe
 
   container.innerHTML = "<p>Cargando productos...</p>";
 
-  // Solo los que estén marcados como destacados y activos
   const featured = products.filter(
-    (p) => p.is_featured === true && p.is_active !== false
+    (p) => p.is_featured !== false && p.is_active !== false
   );
 
   if (!featured.length) {
-    container.innerHTML = "<p>No hay productos destacados cargados.</p>";
+    container.innerHTML =
+      "<p>No hay productos destacados cargados.</p>";
     return;
   }
 
@@ -173,20 +174,18 @@ function renderFeaturedProducts(products) {
     const card = document.createElement("article");
     card.className = "producto";
 
-    const imgHtml = product.image_url
-      ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" />`
-      : "";
-
     card.innerHTML = `
-      ${imgHtml}
       <h3>${product.name}</h3>
       <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
-      <p class="producto-texto">${product.short_description || ""}</p>
+      <p class="producto-texto">${
+        product.short_description || ""
+      }</p>
       <button
         class="btn-secondary"
-        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
-      product.price_cents
-    })">
+        onclick="addToCart('${product.name.replace(
+          /'/g,
+          "\\'"
+        )}', ${product.price_cents})">
         Agregar al carrito
       </button>
     `;
@@ -208,7 +207,7 @@ function renderProductsByCategory(products) {
     other: "grid-other",
   };
 
-  // Si no existe ningún contenedor, no hacemos nada (por si no estamos en index)
+  // Si no existe ninguno de estos contenedores, no hacemos nada
   const anyContainerExists = Object.values(containersMap).some(
     (id) => document.getElementById(id) !== null
   );
@@ -220,32 +219,29 @@ function renderProductsByCategory(products) {
     if (el) el.innerHTML = "";
   });
 
-  // Solo productos activos
   const activos = products.filter((p) => p.is_active !== false);
 
   activos.forEach((product) => {
-    const type = product.type || "other";
-    const containerId = containersMap[type] || containersMap.other;
+    const containerId =
+      containersMap[product.type] || containersMap.other;
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const card = document.createElement("article");
     card.className = "producto";
 
-    const imgHtml = product.image_url
-      ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" />`
-      : "";
-
     card.innerHTML = `
-      ${imgHtml}
       <h3>${product.name}</h3>
       <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
-      <p class="producto-texto">${product.short_description || ""}</p>
+      <p class="producto-texto">${
+        product.short_description || ""
+      }</p>
       <button
         class="btn-secondary"
-        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
-      product.price_cents
-    })">
+        onclick="addToCart('${product.name.replace(
+          /'/g,
+          "\\'"
+        )}', ${product.price_cents})">
         Agregar al carrito
       </button>
     `;
@@ -253,8 +249,8 @@ function renderProductsByCategory(products) {
     container.appendChild(card);
   });
 
-  // Si alguna categoría quedó vacía, mostramos "Próximamente..."
-  Object.entries(containersMap).forEach(([_, id]) => {
+  // Si alguna categoría quedó vacía, mostramos mensaje "Próximamente..."
+  Object.entries(containersMap).forEach(([key, id]) => {
     const container = document.getElementById(id);
     if (!container) return;
 
@@ -271,13 +267,7 @@ function renderProductsByCategory(products) {
 async function initProducts() {
   try {
     const products = await fetchAllProducts();
-
-    // Si existe la sección de destacados, la rellenamos
-    if (document.getElementById("products-grid")) {
-      renderFeaturedProducts(products);
-    }
-
-    // Si existe el catálogo por categoría, lo rellenamos
+    renderFeaturedProducts(products);
     renderProductsByCategory(products);
   } catch (err) {
     console.error("Error general cargando productos:", err);
@@ -290,12 +280,19 @@ async function initProducts() {
 }
 
 // ===============================
-// VALIDACIÓN DATOS DE CONTACTO (cart.html)
+// VALIDACIÓN DATOS DE CONTACTO
 // ===============================
 
-const nameInput = document.getElementById("buyer-name");
-const emailInput = document.getElementById("buyer-email");
-const whatsappInput = document.getElementById("buyer-whatsapp");
+// Soporte para ambos sets de IDs: buyer-* o contact-*
+const nameInput =
+  document.getElementById("buyer-name") ||
+  document.getElementById("contact-name");
+const emailInput =
+  document.getElementById("buyer-email") ||
+  document.getElementById("contact-email");
+const whatsappInput =
+  document.getElementById("buyer-whatsapp") ||
+  document.getElementById("contact-whatsapp");
 const payButton = document.getElementById("pay-button");
 
 function isValidEmail(email) {
@@ -320,13 +317,15 @@ function updatePayButtonState() {
   payButton.classList.toggle("btn-pay--enabled", allOk);
 }
 
-if (nameInput && emailInput && whatsappInput) {
+// Escuchamos cambios en todos los campos (solo existe en cart.html)
+if (nameInput && emailInput && whatsappInput && payButton) {
   ["input", "blur"].forEach((evt) => {
     nameInput.addEventListener(evt, updatePayButtonState);
     emailInput.addEventListener(evt, updatePayButtonState);
     whatsappInput.addEventListener(evt, updatePayButtonState);
   });
 
+  // Estado inicial
   updatePayButtonState();
 }
 
@@ -396,7 +395,7 @@ async function payWithStripe() {
 }
 
 // ===============================
-// INICIALIZACIÓN GLOBAL
+// INICIALIZACIÓN
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
