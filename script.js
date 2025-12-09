@@ -108,7 +108,9 @@ function renderCartPage() {
     div.innerHTML = `
       <div class="cart-item-info">
         <h3 class="cart-item-name">${item.name}</h3>
-        <p class="cart-item-qty">Cantidad: <span>${item.quantity}</span></p>
+        <p class="cart-item-qty">Cantidad: <span>${
+          item.quantity
+        }</span></p>
       </div>
       <div class="cart-item-meta">
         <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
@@ -170,15 +172,21 @@ function renderFeaturedProducts(products) {
     const card = document.createElement("article");
     card.className = "producto";
 
+    const safeName = product.name.replace(/'/g, "\\'");
+    const price = formatUsdFromCents(product.price_cents);
+
     card.innerHTML = `
+      ${
+        product.image_url
+          ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" loading="lazy" onerror="this.style.display='none';" />`
+          : ""
+      }
       <h3>${product.name}</h3>
-      <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
+      <p class="precio">${price}</p>
       <p class="producto-texto">${product.short_description || ""}</p>
       <button
         class="btn-secondary"
-        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
-      product.price_cents
-    })">
+        onclick="addToCart('${safeName}', ${product.price_cents})">
         Agregar al carrito
       </button>
     `;
@@ -223,15 +231,21 @@ function renderProductsByCategory(products) {
     const card = document.createElement("article");
     card.className = "producto";
 
+    const safeName = product.name.replace(/'/g, "\\'");
+    const price = formatUsdFromCents(product.price_cents);
+
     card.innerHTML = `
+      ${
+        product.image_url
+          ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" loading="lazy" onerror="this.style.display='none';" />`
+          : ""
+      }
       <h3>${product.name}</h3>
-      <p class="precio">${formatUsdFromCents(product.price_cents)}</p>
+      <p class="precio">${price}</p>
       <p class="producto-texto">${product.short_description || ""}</p>
       <button
         class="btn-secondary"
-        onclick="addToCart('${product.name.replace(/'/g, "\\'")}', ${
-      product.price_cents
-    })">
+        onclick="addToCart('${safeName}', ${product.price_cents})">
         Agregar al carrito
       </button>
     `;
@@ -270,32 +284,13 @@ async function initProducts() {
 }
 
 // ===============================
-// HELPERS CHECKOUT (IDs flexibles)
+// VALIDACIÓN DATOS DE CONTACTO (cart.html)
 // ===============================
 
-function getCheckoutElements() {
-  const nameInput =
-    document.getElementById("buyer-name") ||
-    document.getElementById("contact-name");
-
-  const emailInput =
-    document.getElementById("buyer-email") ||
-    document.getElementById("contact-email");
-
-  const whatsappInput =
-    document.getElementById("buyer-whatsapp") ||
-    document.getElementById("contact-whatsapp");
-
-  const payButton =
-    document.getElementById("pay-button") ||
-    document.querySelector("[data-role='pay-button']");
-
-  return { nameInput, emailInput, whatsappInput, payButton };
-}
-
-// ===============================
-// VALIDACIÓN DATOS DE CONTACTO (solo cart.html)
-// ===============================
+const nameInput = document.getElementById("buyer-name");
+const emailInput = document.getElementById("buyer-email");
+const whatsappInput = document.getElementById("buyer-whatsapp");
+const payButton = document.getElementById("pay-button");
 
 function isValidEmail(email) {
   return /\S+@\S+\.\S+/.test(email);
@@ -305,25 +300,22 @@ function isValidWhatsapp(value) {
   return value.replace(/\D/g, "").length >= 8;
 }
 
-function initCheckoutValidation() {
-  const { nameInput, emailInput, whatsappInput, payButton } =
-    getCheckoutElements();
-
-  // Si no estamos en cart.html, no hacemos nada
+function updatePayButtonState() {
   if (!nameInput || !emailInput || !whatsappInput || !payButton) return;
 
-  function updatePayButtonState() {
-    const nameOk = nameInput.value.trim().length > 2;
-    const emailOk = isValidEmail(emailInput.value.trim());
-    const whatsappOk = isValidWhatsapp(whatsappInput.value.trim());
+  const nameOk = nameInput.value.trim().length > 2;
+  const emailOk = isValidEmail(emailInput.value.trim());
+  const whatsappOk = isValidWhatsapp(whatsappInput.value.trim());
 
-    const allOk = nameOk && emailOk && whatsappOk;
+  const allOk = nameOk && emailOk && whatsappOk;
 
-    payButton.disabled = !allOk;
-    payButton.classList.toggle("btn-pay--disabled", !allOk);
-    payButton.classList.toggle("btn-pay--enabled", allOk);
-  }
+  payButton.disabled = !allOk;
+  payButton.classList.toggle("btn-pay--disabled", !allOk);
+  payButton.classList.toggle("btn-pay--enabled", allOk);
+}
 
+// Escuchamos cambios en todos los campos (solo existe en cart.html)
+if (nameInput && emailInput && whatsappInput) {
   ["input", "blur"].forEach((evt) => {
     nameInput.addEventListener(evt, updatePayButtonState);
     emailInput.addEventListener(evt, updatePayButtonState);
@@ -341,9 +333,6 @@ function initCheckoutValidation() {
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 async function payWithStripe() {
-  // Siempre traemos los elementos actuales del DOM
-  const { nameInput, emailInput, whatsappInput } = getCheckoutElements();
-
   // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
 
@@ -391,7 +380,7 @@ async function payWithStripe() {
     const data = await response.json();
 
     if (data?.url) {
-      window.location.href = data.url; // redirección a Stripe
+      window.location.href = data.url;
     } else {
       console.error("Respuesta Stripe inesperada:", data);
       alert("No se pudo crear el pago con Stripe. Intentá nuevamente.");
@@ -403,7 +392,7 @@ async function payWithStripe() {
 }
 
 // ===============================
-// INICIALIZACIÓN GLOBAL
+// INICIALIZACIÓN
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -418,18 +407,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateCartBadge();
   renderCartPage(); // si estamos en cart.html
 
-  // Renderizar productos dinámicamente solo si hay contenedores de catálogo
-  if (
-    document.getElementById("products-grid") ||
-    document.getElementById("grid-courses") ||
-    document.getElementById("grid-indicators") ||
-    document.getElementById("grid-bots") ||
-    document.getElementById("grid-physical") ||
-    document.getElementById("grid-other")
-  ) {
-    initProducts();
-  }
-
-  // Validación del checkout (solo cart.html)
-  initCheckoutValidation();
+  // Renderizar productos dinámicamente (si estamos en index.html habrá contenedores)
+  initProducts();
 });
