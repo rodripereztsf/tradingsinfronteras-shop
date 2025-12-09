@@ -147,6 +147,17 @@ async function fetchAllProducts() {
   return allProducts;
 }
 
+// Helper para obtener URL de imagen desde distintos campos posibles
+function getProductImageUrl(product) {
+  return (
+    product.image_url ||
+    product.img ||
+    product.image ||
+    product.thumbnail_url ||
+    null
+  );
+}
+
 // ===============================
 // RENDER: PRODUCTOS DESTACADOS
 // ===============================
@@ -174,11 +185,12 @@ function renderFeaturedProducts(products) {
 
     const safeName = product.name.replace(/'/g, "\\'");
     const price = formatUsdFromCents(product.price_cents);
+    const imgUrl = getProductImageUrl(product);
 
     card.innerHTML = `
       ${
-        product.image_url
-          ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" loading="lazy" onerror="this.style.display='none';" />`
+        imgUrl
+          ? `<img src="${imgUrl}" alt="${product.name}" class="producto-img" loading="lazy" onerror="this.style.display='none';" />`
           : ""
       }
       <h3>${product.name}</h3>
@@ -233,11 +245,12 @@ function renderProductsByCategory(products) {
 
     const safeName = product.name.replace(/'/g, "\\'");
     const price = formatUsdFromCents(product.price_cents);
+    const imgUrl = getProductImageUrl(product);
 
     card.innerHTML = `
       ${
-        product.image_url
-          ? `<img src="${product.image_url}" alt="${product.name}" class="producto-img" loading="lazy" onerror="this.style.display='none';" />`
+        imgUrl
+          ? `<img src="${imgUrl}" alt="${product.name}" class="producto-img" loading="lazy" onerror="this.style.display='none';" />`
           : ""
       }
       <h3>${product.name}</h3>
