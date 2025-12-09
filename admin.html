@@ -304,17 +304,14 @@
           </div>
 
           <div>
-            <label for="image_url">Cargar imagen (JPG o PNG)</label>
-<input
-  type="text"
-  id="image_url"
-  class="admin-input"
-  placeholder="Pegá aquí la URL de la imagen (JPG o PNG)"
-/>
-<p class="admin-help">
-  JPG o PNG
-</p>
-
+            <label for="p-img">Cargar imagen (JPG o PNG)</label>
+            <input
+              type="text"
+              id="p-img"
+              class="admin-input"
+              placeholder="Pegá aquí la URL de la imagen (JPG o PNG)"
+            />
+            <small>JPG o PNG</small>
           </div>
 
           <div>
@@ -387,8 +384,7 @@
 
   <script>
     const ADMIN_PASSWORD = "tsfadmin2025"; // cámbiala por la que quieras
-    const API_BASE =
-      "https://tradingsinfronteras-shop.vercel.app" || "";
+    const API_BASE = "https://tradingsinfronteras-shop.vercel.app" || "";
 
     function handleAdminLogin() {
       const input = document.getElementById("admin-password");
@@ -519,7 +515,7 @@
         currency: "USD",
         image_url: img,
         is_active: isActive,
-        is_featured: isFeatured, // 👈 importante
+        is_featured: isFeatured,
         delivery_type: delivery ? "drive_link" : "none",
         delivery_value: delivery,
         email_body: emailBody,
