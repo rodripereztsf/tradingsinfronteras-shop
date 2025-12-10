@@ -70,17 +70,17 @@ module.exports = async (req, res) => {
     let products = await redis.get("tsf:products");
     if (!Array.isArray(products)) products = [];
 
+    // -------- GET: listado completo para el panel admin --------
     if (req.method === "GET") {
-      // Listado completo para el panel admin
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");
       return res.end(JSON.stringify({ products }));
     }
 
+    // -------- POST: crear / actualizar producto --------
     if (req.method === "POST") {
       const payload = await parseBody(req);
 
-      // Campos básicos
       const {
         id,
         name,
@@ -95,7 +95,7 @@ module.exports = async (req, res) => {
         email_subject,
         email_body,
         pdf_url,
-        is_featured, // puede venir true/false/"true"/"false"/1/"1"
+        is_featured, // true/false/"true"/"false"/1/"1"
       } = payload || {};
 
       if (!name || !price_cents) {
@@ -131,9 +131,8 @@ module.exports = async (req, res) => {
           `Tu compra en Trading Sin Fronteras – ${name}`,
         email_body: email_body || "",
         pdf_url: pdf_url || "",
-        // 👇 Nuevo flag para "Productos destacados"
-        // Ojo: usamos !== false para que productos viejos sin este campo
-        // se consideren destacados hasta que los edites.
+        // 👇 Flag para "Productos destacados"
+        // Los viejos (sin campo) se consideran destacados hasta que los edites.
         is_featured:
           is_featured === undefined ? true : normalizedIsFeatured,
       };
@@ -152,6 +151,7 @@ module.exports = async (req, res) => {
       return res.end(JSON.stringify({ product: normalizedProduct }));
     }
 
+    // -------- DELETE: borrar producto --------
     if (req.method === "DELETE") {
       const body = await parseBody(req);
       const id = body.id || (req.query ? req.query.id : null);
@@ -169,7 +169,7 @@ module.exports = async (req, res) => {
       return res.end(JSON.stringify({ ok: true }));
     }
 
-    // Método no permitido
+    // -------- Método no permitido --------
     res.statusCode = 405;
     res.setHeader("Content-Type", "application/json");
     return res.end(JSON.stringify({ error: "Method not allowed" }));
