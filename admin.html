@@ -210,6 +210,44 @@
       opacity: 0.8;
     }
 
+    /* Bloque imagen admin */
+    .admin-image-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .admin-image-row-inner {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-image-row-inner input[type="file"] {
+      max-width: 200px;
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .admin-image-row-inner input[type="text"] {
+      flex: 1;
+    }
+
+    .admin-image-status {
+      font-size: 0.7rem;
+      opacity: 0.75;
+    }
+
+    .admin-image-preview {
+      margin-top: 6px;
+      max-width: 100%;
+      max-height: 140px;
+      border-radius: 8px;
+      border: 1px solid #222;
+      object-fit: cover;
+    }
+
     @media (max-width: 900px) {
       .admin-grid {
         grid-template-columns: 1fr;
@@ -303,15 +341,30 @@
             <textarea id="p-desc" rows="3"></textarea>
           </div>
 
-          <div>
-            <label for="p-img">Cargar imagen (JPG o PNG)</label>
-            <input
-              type="text"
-              id="p-img"
-              class="admin-input"
-              placeholder="Pegá aquí la URL de la imagen (JPG o PNG)"
+          <!-- IMAGEN DEL PRODUCTO: upload + URL -->
+          <div class="admin-image-row">
+            <label>Imagen del producto (JPG o PNG)</label>
+            <div class="admin-image-row-inner">
+              <input
+                type="file"
+                id="p-img-file"
+                accept="image/jpeg,image/png"
+              />
+              <input
+                type="text"
+                id="p-img"
+                placeholder="URL de la imagen (se completa automáticamente al subir)"
+              />
+            </div>
+            <div id="p-img-status" class="admin-image-status">
+              Podés subir una imagen desde tu PC; guardaremos la URL automática.
+            </div>
+            <img
+              id="p-img-preview"
+              class="admin-image-preview"
+              style="display:none;"
+              alt="Vista previa"
             />
-            <small>JPG o PNG</small>
           </div>
 
           <div>
@@ -384,7 +437,13 @@
 
   <script>
     const ADMIN_PASSWORD = "tsfadmin2025"; // cámbiala por la que quieras
-    const API_BASE = "https://tradingsinfronteras-shop.vercel.app" || "";
+    const API_BASE =
+      "https://tradingsinfronteras-shop.vercel.app" || "";
+
+    // 👉 COMPLETÁ ESTO CON TUS DATOS DE CLOUDINARY
+    const CLOUDINARY_CLOUD_NAME = "TU_CLOUD_NAME_AQUI";      // ej: "dx123abcd"
+    const CLOUDINARY_UPLOAD_PRESET = "tsf_shop";             // el preset unsigned
+    const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
     function handleAdminLogin() {
       const input = document.getElementById("admin-password");
@@ -474,7 +533,80 @@
       document.getElementById("p-pdf").value = "";
       document.getElementById("admin-form-msg").textContent =
         "Completa los datos y guardá el producto.";
+
+      // reset imagen
+      const preview = document.getElementById("p-img-preview");
+      const status = document.getElementById("p-img-status");
+      if (preview) {
+        preview.style.display = "none";
+        preview.src = "";
+      }
+      if (status) {
+        status.textContent =
+          "Podés subir una imagen desde tu PC; guardaremos la URL automática.";
+      }
+      const fileInput = document.getElementById("p-img-file");
+      if (fileInput) fileInput.value = "";
     }
+
+    // === SUBIDA DE IMAGEN A CLOUDINARY ===
+    async function uploadImageFile(file) {
+      const statusEl = document.getElementById("p-img-status");
+      const urlInput = document.getElementById("p-img");
+      const preview = document.getElementById("p-img-preview");
+
+      if (!file) return;
+
+      if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+        alert(
+          "Falta configurar CLOUDINARY_CLOUD_NAME o CLOUDINARY_UPLOAD_PRESET en admin.html"
+        );
+        return;
+      }
+
+      try {
+        statusEl.textContent = "Subiendo imagen...";
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+        const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("Cloudinary error:", data);
+          throw new Error("Error al subir la imagen");
+        }
+
+        const imageUrl = data.secure_url;
+        urlInput.value = imageUrl;
+        statusEl.textContent = "Imagen subida correctamente.";
+        if (preview) {
+          preview.src = imageUrl;
+          preview.style.display = "block";
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent =
+          "Error al subir la imagen. Revisá la consola.";
+      }
+    }
+
+    // Listener para input file
+    document.addEventListener("DOMContentLoaded", () => {
+      const fileInput = document.getElementById("p-img-file");
+      if (fileInput) {
+        fileInput.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            uploadImageFile(file);
+          }
+        });
+      }
+    });
 
     async function handleSaveProduct(event) {
       event.preventDefault();
@@ -578,6 +710,25 @@
       document.getElementById("p-email-body").value =
         product.email_body || "";
       document.getElementById("p-pdf").value = product.pdf_url || "";
+
+      // preview de la imagen si existe
+      const preview = document.getElementById("p-img-preview");
+      const status = document.getElementById("p-img-status");
+      if (product.image_url && preview) {
+        preview.src = product.image_url;
+        preview.style.display = "block";
+        status.textContent =
+          "Imagen cargada. Podés cambiarla subiendo un archivo nuevo.";
+      } else {
+        if (preview) {
+          preview.style.display = "none";
+          preview.src = "";
+        }
+        if (status) {
+          status.textContent =
+            "Podés subir una imagen desde tu PC; guardaremos la URL automática.";
+        }
+      }
 
       document.getElementById("admin-form-msg").textContent =
         "Editando producto. Guardá los cambios o limpia el formulario para crear uno nuevo.";
