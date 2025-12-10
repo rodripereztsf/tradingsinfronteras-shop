@@ -563,3 +563,25 @@ a {
   font-size: 0.85rem;
   opacity: 0.8;
 }
+/* ==========================
+   Enlace oculto Admin
+   ========================== */
+
+.admin-secret-link {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  opacity: 0;              /* invisible por defecto */
+  cursor: pointer;
+  z-index: 9999;
+}
+
+/* Si alguna vez pasás el mouse por ahí lo ves apenas */
+.admin-secret-link:hover,
+.admin-secret-link:focus {
+  opacity: 0.15;
+  box-shadow: 0 0 0 1px #00cfff;
+}
