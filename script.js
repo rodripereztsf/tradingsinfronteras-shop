@@ -235,8 +235,7 @@ function renderProductsByCategory(products) {
   const activos = products.filter((p) => p.is_active !== false);
 
   activos.forEach((product) => {
-    const containerId =
-      containersMap[product.type] || containersMap.other;
+    const containerId = containersMap[product.type] || containersMap.other;
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -345,7 +344,33 @@ if (nameInput && emailInput && whatsappInput) {
 
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
-async function payWithStripe() {
+// helper: fetch con debug de error aunque no sea JSON
+async function fetchJsonDebug(url, options) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+
+  let data = {};
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!res.ok) {
+    // esto te va a mostrar el motivo real del 500
+    console.error("API error:", res.status, data);
+    const msg =
+      data?.message ||
+      data?.error ||
+      `Error en servidor (${res.status}). Mirá consola.`;
+    throw new Error(msg);
+  }
+
+  return data;
+}
+
+// currency: "usd" o "ars"
+async function payWithStripe(currency = "usd") {
   // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
 
@@ -364,24 +389,23 @@ async function payWithStripe() {
   }
 
   try {
-    const successUrl =
-      window.location.origin + "/checkout-success-stripe.html";
-    const cancelUrl = window.location.href;
-
     const payload = {
-      items: cart.map((item) => ({
+      // NUEVO formato (recomendado)
+      customer: {
+        name: buyerName,
+        email: buyerEmail,
+        whatsapp: buyerWhatsApp,
+      },
+      cart: cart.map((item) => ({
         name: item.name,
-        price: item.price, // en centavos
-        quantity: item.quantity || 1,
+        // en tu carrito ya está en centavos
+        price: Number(item.price),
+        qty: Number(item.quantity || 1),
       })),
-      buyerName,
-      buyerEmail,
-      buyerWhatsApp,
-      successUrl,
-      cancelUrl,
+      currency: String(currency).trim().toLowerCase(),
     };
 
-    const response = await fetch(
+    const data = await fetchJsonDebug(
       `${API_BASE}/api/create-stripe-checkout`,
       {
         method: "POST",
@@ -390,19 +414,31 @@ async function payWithStripe() {
       }
     );
 
-    const data = await response.json();
-
     if (data?.url) {
       window.location.href = data.url;
-    } else {
-      console.error("Respuesta Stripe inesperada:", data);
-      alert("No se pudo crear el pago con Stripe. Intentá nuevamente.");
+      return;
     }
+
+    console.error("Respuesta Stripe inesperada:", data);
+    alert("Respuesta Stripe inesperada. Mirá consola.");
   } catch (e) {
-    console.error(e);
-    alert("Error al conectar con Stripe. Intentá nuevamente.");
+    console.error("payWithStripe error:", e);
+    alert(e?.message || "Error al conectar con Stripe. Intentá nuevamente.");
   }
 }
+
+// Si tu HTML tiene botones separados ARS/USD, conectalos así:
+// (si no existen, esto no rompe nada)
+document.addEventListener("click", (e) => {
+  const t = e.target;
+
+  // Ejemplos de ids posibles. Ajustá si los tuyos se llaman distinto.
+  if (t && t.id === "pay-usd") payWithStripe("usd");
+  if (t && t.id === "pay-ars") payWithStripe("ars");
+
+  // Si seguís usando un solo botón "pay-button", paga en USD por defecto:
+  if (t && t.id === "pay-button") payWithStripe("usd");
+});
 
 // ===============================
 // INICIALIZACIÓN
@@ -420,6 +456,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateCartBadge();
   renderCartPage(); // si estamos en cart.html
 
-  // Renderizar productos dinámicamente (si estamos en index.html habrá contenedores)
+  // Renderizar productos dinámicamente
   initProducts();
 });
