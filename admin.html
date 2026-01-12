@@ -10,418 +10,261 @@
 
   <style>
     :root{
-      --bg: #020308;
-      --panel: #070a10;
-      --card: rgba(15, 18, 28, .72);
-      --card2: rgba(10, 12, 18, .75);
-      --border: rgba(255,255,255,.08);
-      --border2: rgba(0, 207, 255, .18);
-      --text: #ffffff;
-      --muted: rgba(255,255,255,.72);
-      --muted2: rgba(255,255,255,.55);
-      --accent: #00cfff;
-      --danger: #ff5c5c;
-      --ok: #2ecc71;
-      --warn: #f1c40f;
-      --shadow: 0 18px 60px rgba(0,0,0,.7);
-      --radius: 18px;
-      --radius2: 14px;
+      --bg:#020308;
+      --border:rgba(255,255,255,.08);
+      --text:#fff;
+      --muted:rgba(255,255,255,.72);
+      --muted2:rgba(255,255,255,.55);
+      --accent:#00cfff;
+      --danger:#ff5c5c;
+      --ok:#2ecc71;
+      --shadow:0 18px 60px rgba(0,0,0,.7);
+      --radius:18px;
+      --radius2:14px;
     }
-
-    *{ box-sizing:border-box; }
-
+    *{box-sizing:border-box}
     body{
-      font-family: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont,"Segoe UI", sans-serif;
+      font-family:"Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       background: radial-gradient(circle at 30% -10%, rgba(0,207,255,.10), transparent 45%),
                   radial-gradient(circle at 80% 0%, rgba(0,207,255,.07), transparent 40%),
                   var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
+      color:var(--text);
+      margin:0;
+      min-height:100vh;
     }
-
-    .wrap{
-      max-width: 1180px;
-      margin: 64px auto;
-      padding: 0 18px;
-    }
-
-    .topbar{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .title{
-      font-size: 1.9rem;
-      font-weight: 800;
-      margin: 0;
-      letter-spacing: .2px;
-    }
-
-    .subtitle{
-      margin: 10px 0 0 0;
-      color: var(--muted);
-      font-size: .95rem;
-      line-height: 1.5;
-      max-width: 820px;
-    }
-
-    .hint{
-      margin-top: 10px;
-      color: var(--muted2);
-      font-size: .85rem;
-    }
-
+    .wrap{max-width:1180px;margin:64px auto;padding:0 18px}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+    .title{font-size:1.9rem;font-weight:800;margin:0}
+    .subtitle{margin:10px 0 0 0;color:var(--muted);font-size:.95rem;line-height:1.5;max-width:860px}
+    .hint{margin-top:10px;color:var(--muted2);font-size:.85rem}
     .panel{
       background: rgba(7,10,16,.62);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
     }
-
-    .panel-inner{
-      padding: 22px;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1.65fr 1fr;
-      gap: 18px;
-      align-items: start;
-    }
-
+    .panel-inner{padding:22px}
     .card{
       background: linear-gradient(180deg, rgba(12,14,20,.78), rgba(8,10,16,.62));
-      border: 1px solid var(--border);
-      border-radius: var(--radius2);
-      padding: 16px;
+      border:1px solid var(--border);
+      border-radius:var(--radius2);
+      padding:16px;
     }
+    .card h2{margin:0 0 12px 0;font-size:1.08rem;font-weight:800}
 
-    .card h2{
-      margin: 0 0 12px 0;
-      font-size: 1.08rem;
-      font-weight: 800;
-      letter-spacing: .2px;
-    }
-
-    /* TABLE */
     .table-wrap{
-      width: 100%;
-      overflow: auto;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.06);
+      width:100%;
+      overflow:auto;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.06);
       background: rgba(0,0,0,.35);
     }
-
-    table{
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 720px;
-      font-size: .86rem;
-    }
-
+    table{width:100%;border-collapse:collapse;min-width:780px;font-size:.86rem}
     thead th{
-      text-align: left;
-      padding: 12px 12px;
-      color: rgba(255,255,255,.82);
-      font-weight: 700;
+      text-align:left;
+      padding:12px 12px;
+      color:rgba(255,255,255,.82);
+      font-weight:700;
       background: rgba(255,255,255,.03);
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      position: sticky;
-      top: 0;
-      z-index: 1;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      position:sticky;top:0;z-index:1;
     }
-
     tbody td{
-      padding: 12px 12px;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      vertical-align: middle;
-      color: rgba(255,255,255,.86);
+      padding:12px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:middle;
+      color:rgba(255,255,255,.86);
     }
-
-    tbody tr:hover td{
-      background: rgba(0,207,255,.04);
-    }
-
-    tbody tr:last-child td{
-      border-bottom: none;
-    }
-
-    .col-actions{
-      white-space: nowrap;
-    }
+    tbody tr:hover td{background: rgba(0,207,255,.04)}
+    tbody tr:last-child td{border-bottom:none}
+    .col-actions{white-space:nowrap}
 
     .badge{
-      display:inline-flex;
-      align-items:center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: .72rem;
-      font-weight: 700;
-      border: 1px solid rgba(255,255,255,.14);
-      color: rgba(255,255,255,.85);
+      display:inline-flex;align-items:center;gap:6px;
+      padding:4px 10px;border-radius:999px;
+      font-size:.72rem;font-weight:700;
+      border:1px solid rgba(255,255,255,.14);
+      color:rgba(255,255,255,.85);
       background: rgba(255,255,255,.04);
     }
-    .badge.ok{
-      border-color: rgba(46,204,113,.35);
-      color: var(--ok);
-      background: rgba(46,204,113,.07);
-    }
-    .badge.no{
-      border-color: rgba(255,92,92,.35);
-      color: var(--danger);
-      background: rgba(255,92,92,.06);
-    }
+    .badge.ok{border-color: rgba(46,204,113,.35);color:var(--ok);background: rgba(46,204,113,.07)}
+    .badge.no{border-color: rgba(255,92,92,.35);color:var(--danger);background: rgba(255,92,92,.06)}
 
-    /* FORM */
-    form{
-      display:flex;
-      flex-direction:column;
-      gap: 12px;
-      font-size: .92rem;
-    }
-
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    label{
-      font-size: .80rem;
-      font-weight: 700;
-      color: rgba(255,255,255,.78);
-      display:block;
-      margin-bottom: 6px;
-    }
-
-    input, textarea, select{
-      width: 100%;
-      background: rgba(0,0,0,.35);
-      border: 1px solid rgba(255,255,255,.12);
-      color: #fff;
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-family: inherit;
-      font-size: .90rem;
-      outline: none;
-      transition: border-color .18s ease, box-shadow .18s ease;
-    }
-
-    textarea{
-      resize: vertical;
-      min-height: 86px;
-    }
-
-    input:focus, textarea:focus, select:focus{
-      border-color: rgba(0,207,255,.55);
-      box-shadow: 0 0 0 3px rgba(0,207,255,.14);
-    }
-
-    .help{
-      margin-top: 6px;
-      font-size: .76rem;
-      color: var(--muted2);
-      line-height: 1.35;
-    }
-
-    .img-block{
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-    }
-
-    .img-row{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-    }
-
-    input[type="file"]{
-      padding: 8px 10px;
-      border-radius: 999px;
-      max-width: 220px;
-      cursor: pointer;
-      background: rgba(255,255,255,.03);
-    }
-
-    .img-status{
-      font-size: .78rem;
-      color: var(--muted2);
-    }
-
-    .img-preview{
-      width: 100%;
-      max-height: 180px;
-      object-fit: cover;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.10);
-      display:none;
-    }
-
-    /* BUTTONS */
     .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap: 8px;
-      border-radius: 999px;
-      padding: 10px 16px;
-      border: 1px solid rgba(0,207,255,.45);
-      color: var(--accent);
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      border-radius:999px;padding:10px 16px;
+      border:1px solid rgba(0,207,255,.45);
+      color:var(--accent);
       background: rgba(0,207,255,.06);
-      cursor: pointer;
-      font-weight: 800;
-      font-size: .86rem;
+      cursor:pointer;font-weight:800;font-size:.86rem;
       transition: transform .12s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
       user-select:none;
     }
-    .btn:hover{
-      background: rgba(0,207,255,.14);
-      transform: translateY(-1px);
-      border-color: rgba(0,207,255,.70);
-    }
-    .btn:disabled{
-      opacity: .45;
-      cursor: default;
-      transform: none;
-    }
-
+    .btn:hover{background: rgba(0,207,255,.14);transform: translateY(-1px);border-color: rgba(0,207,255,.7)}
+    .btn:disabled{opacity:.45;cursor:default;transform:none}
     .btn.small{
-      padding: 7px 12px;
-      font-weight: 800;
-      font-size: .78rem;
+      padding:7px 12px;font-size:.78rem;
       background: rgba(255,255,255,.04);
       border-color: rgba(255,255,255,.14);
       color: rgba(255,255,255,.82);
     }
-    .btn.small:hover{
-      background: rgba(255,255,255,.08);
-      border-color: rgba(0,207,255,.55);
-      color: var(--accent);
-    }
+    .btn.small:hover{background: rgba(255,255,255,.08);border-color: rgba(0,207,255,.55);color:var(--accent)}
+    .btn.danger{border-color: rgba(255,92,92,.45);color:var(--danger);background: rgba(255,92,92,.06)}
+    .btn.danger:hover{background: rgba(255,92,92,.14);border-color: rgba(255,92,92,.7)}
+    .btn.primary{border-color: rgba(0,207,255,.55);background: rgba(0,207,255,.12)}
 
-    .btn.danger{
-      border-color: rgba(255,92,92,.45);
-      color: var(--danger);
-      background: rgba(255,92,92,.06);
+    .toolbar{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      margin-top:12px;flex-wrap:wrap;
     }
-    .btn.danger:hover{
-      background: rgba(255,92,92,.14);
-      border-color: rgba(255,92,92,.70);
-    }
-
-    .btn.primary{
-      border-color: rgba(0,207,255,.55);
-      background: rgba(0,207,255,.12);
-    }
-
-    .form-footer{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 6px;
-    }
-
-    .msg{
-      font-size: .82rem;
-      color: rgba(255,255,255,.68);
-      line-height: 1.35;
-      margin: 0;
-    }
-
     .pill{
-      display:inline-flex;
-      align-items:center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.10);
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
-      font-size: .78rem;
-      color: rgba(255,255,255,.72);
-      white-space: nowrap;
+      font-size:.78rem;color: rgba(255,255,255,.72);
+      white-space:nowrap;
     }
 
     /* LOGIN */
     .login{
-      max-width: 420px;
-      margin: 14vh auto;
-      padding: 22px;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.10);
+      max-width:420px;margin:14vh auto;padding:22px;
+      border-radius:18px;border:1px solid rgba(255,255,255,.10);
       background: rgba(7,10,16,.75);
       box-shadow: var(--shadow);
-      text-align: center;
+      text-align:center;
     }
-
-    .login h1{
-      margin: 0 0 6px 0;
-      font-size: 1.55rem;
-      font-weight: 900;
-    }
-
-    .login p{
-      margin: 0 0 14px 0;
-      color: var(--muted);
-      font-size: .95rem;
-      line-height: 1.45;
-    }
-
+    .login h1{margin:0 0 6px 0;font-size:1.55rem;font-weight:900}
+    .login p{margin:0 0 14px 0;color:var(--muted);font-size:.95rem;line-height:1.45}
     .login input{
-      border-radius: 999px;
-      text-align: center;
-      letter-spacing: .3px;
+      width:100%;
+      background: rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;border-radius:999px;padding:10px 12px;
+      font-family:inherit;font-size:.92rem;outline:none;
+      text-align:center;
     }
+    .msg{font-size:.82rem;color: rgba(255,255,255,.68);line-height:1.35;margin:10px 0 0 0;min-height:18px}
 
-    .login .msg{
-      margin-top: 10px;
-      min-height: 18px;
+    /* ====== MODAL / PANEL FORM ====== */
+    .modal{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 18px;
     }
+    .modal.is-open{display:flex;}
+    .modal-backdrop{
+      position:absolute;inset:0;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .modal-sheet{
+      position: relative;
+      width: min(980px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(12,14,20,.92), rgba(8,10,16,.90));
+      box-shadow: 0 26px 90px rgba(0,0,0,.8);
+    }
+    .modal-header{
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(8,10,16,.86);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .modal-title{
+      margin:0;
+      font-size: 1.05rem;
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+    .modal-body{padding: 16px;}
+    .xbtn{
+      display:inline-flex;align-items:center;justify-content:center;
+      width: 38px;height:38px;border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.86);
+      cursor:pointer;
+      font-weight: 900;
+      font-size: 1.05rem;
+    }
+    .xbtn:hover{border-color: rgba(0,207,255,.55);color: var(--accent);background: rgba(0,207,255,.08)}
 
-    /* RESPONSIVE */
+    /* FORM */
+    form{display:flex;flex-direction:column;gap:12px;font-size:.92rem}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{font-size:.80rem;font-weight:700;color: rgba(255,255,255,.78);display:block;margin-bottom:6px}
+    input, textarea, select{
+      width:100%;
+      background: rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;border-radius:12px;
+      padding:10px 12px;
+      font-family:inherit;font-size:.90rem;
+      outline:none;
+      transition:border-color .18s ease, box-shadow .18s ease;
+    }
+    textarea{resize:vertical;min-height:86px}
+    input:focus, textarea:focus, select:focus{
+      border-color: rgba(0,207,255,.55);
+      box-shadow: 0 0 0 3px rgba(0,207,255,.14);
+    }
+    .help{margin-top:6px;font-size:.76rem;color: var(--muted2);line-height:1.35}
+
+    .img-block{display:flex;flex-direction:column;gap:10px}
+    .img-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input[type="file"]{padding:8px 10px;border-radius:999px;max-width:220px;cursor:pointer;background: rgba(255,255,255,.03)}
+    .img-status{font-size:.78rem;color: var(--muted2)}
+    .img-preview{width:100%;max-height:210px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.10);display:none}
+
+    .form-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
+    .form-footer .left, .form-footer .right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
     @media (max-width: 980px){
-      .grid{ grid-template-columns: 1fr; }
-      .topbar{ flex-direction: column; }
-      .wrap{ margin: 40px auto; }
+      .wrap{margin:40px auto}
+      table{min-width:720px}
     }
-
     @media (max-width: 520px){
-      .panel-inner{ padding: 16px; }
-      .card{ padding: 14px; }
-      .title{ font-size: 1.55rem; }
-      .subtitle{ font-size: .92rem; }
-      .row{ grid-template-columns: 1fr; }
-      input[type="file"]{ max-width: 100%; }
+      .panel-inner{padding:16px}
+      .card{padding:14px}
+      .title{font-size:1.55rem}
+      .subtitle{font-size:.92rem}
+      .row{grid-template-columns:1fr}
+      input[type="file"]{max-width:100%}
+      .modal{padding: 10px;}
+      .modal-sheet{max-height: 95vh;}
     }
   </style>
 </head>
 
 <body>
-
   <!-- LOGIN -->
   <div id="admin-login" class="login">
     <h1>Admin · TSF SHOP</h1>
     <p>Acceso solo para administradores.</p>
 
     <input id="admin-password" type="password" placeholder="Contraseña de admin" />
-
     <button class="btn primary" onclick="handleAdminLogin()">Entrar</button>
 
     <p id="admin-login-msg" class="msg"></p>
-
-    <div class="hint" style="margin-top:12px;">
-      Tip: guardá tu link directo <b>/admin.html</b> en favoritos.
-    </div>
+    <div class="hint">Tip: guardá tu link directo <b>/admin.html</b> en favoritos.</div>
   </div>
 
   <!-- PANEL -->
@@ -430,11 +273,11 @@
       <div>
         <h1 class="title">Panel de productos · TSF SHOP</h1>
         <p class="subtitle">
-          Crea, edita y elimina productos. Los <b>activos</b> se muestran en la tienda; los que marques como <b>destacados</b>
-          aparecen en “Productos destacados”.
+          Vista lista (ancha). Tocá <b>+ Nuevo producto</b> o <b>Editar</b> para abrir el formulario.
         </p>
         <div class="hint">Todo se guarda en Upstash. Las imágenes se suben a Cloudinary.</div>
       </div>
+
       <div class="pill">
         API: <span id="api-pill" style="color:rgba(255,255,255,.9);font-weight:800;"></span>
       </div>
@@ -442,159 +285,167 @@
 
     <div class="panel">
       <div class="panel-inner">
-        <div class="grid">
+        <section class="card">
+          <h2>Productos actuales</h2>
 
-          <!-- LISTADO -->
-          <section class="card">
-            <h2>Productos actuales</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Precio</th>
+                  <th>Tipo</th>
+                  <th>Activo</th>
+                  <th>Destacado</th>
+                  <th class="col-actions">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="admin-products-tbody">
+                <tr><td colspan="6">Cargando productos...</td></tr>
+              </tbody>
+            </table>
+          </div>
 
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Precio</th>
-                    <th>Tipo</th>
-                    <th>Activo</th>
-                    <th>Destacado</th>
-                    <th class="col-actions">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-products-tbody">
-                  <tr><td colspan="6">Cargando productos...</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="form-footer" style="margin-top:12px;">
+          <div class="toolbar">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn small" type="button" onclick="loadAdminProducts()">↻ Recargar</button>
-              <button class="btn small" type="button" onclick="resetForm()">＋ Nuevo producto</button>
+              <button class="btn" type="button" onclick="openFormForNew()">＋ Nuevo producto</button>
             </div>
-          </section>
+            <div class="pill">Tip: ESC cierra el formulario</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
 
-          <!-- FORMULARIO -->
-          <section class="card">
-            <h2 id="form-title">Crear nuevo producto</h2>
+  <!-- MODAL FORM -->
+  <div id="form-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="closeFormModal()"></div>
 
-            <form onsubmit="handleSaveProduct(event)">
-              <input type="hidden" id="p-id" />
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title">Crear nuevo producto</h3>
+        <button class="xbtn" type="button" onclick="closeFormModal()" aria-label="Cerrar">✕</button>
+      </div>
 
-              <div>
-                <label for="p-name">Nombre</label>
-                <input id="p-name" required />
-              </div>
+      <div class="modal-body">
+        <form onsubmit="handleSaveProduct(event)">
+          <input type="hidden" id="p-id" />
 
-              <div class="row">
-                <div>
-                  <label for="p-price">Precio (USD)</label>
-                  <input id="p-price" type="number" step="0.01" min="0" required />
-                  <div class="help">Ej: 49.90 → se guarda como 4990 centavos.</div>
-                </div>
+          <div>
+            <label for="p-name">Nombre</label>
+            <input id="p-name" required />
+          </div>
 
-                <div>
-                  <label for="p-type">Tipo</label>
-                  <select id="p-type">
-                    <option value="course">Formación / Curso</option>
-                    <option value="indicator">Indicador TradingView</option>
-                    <option value="bot">Bot / Robot</option>
-                    <option value="physical">Producto físico</option>
-                    <option value="other">Otro</option>
-                  </select>
-                </div>
-              </div>
+          <div class="row">
+            <div>
+              <label for="p-price">Precio (USD)</label>
+              <input id="p-price" type="number" step="0.01" min="0" required />
+              <div class="help">Ej: 49.90 → se guarda como 4990 centavos.</div>
+            </div>
 
-              <div>
-                <label for="p-desc">Descripción corta</label>
-                <textarea id="p-desc" rows="3" placeholder="Texto corto que aparece en la tienda..."></textarea>
-              </div>
+            <div>
+              <label for="p-type">Tipo</label>
+              <select id="p-type">
+                <option value="course">Formación / Curso</option>
+                <option value="indicator">Indicador TradingView</option>
+                <option value="bot">Bot / Robot</option>
+                <option value="physical">Producto físico</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+          </div>
 
-              <!-- IMAGEN -->
-              <div class="img-block">
-                <label>Imagen del producto (JPG o PNG)</label>
+          <div>
+            <label for="p-desc">Descripción corta</label>
+            <textarea id="p-desc" rows="3" placeholder="Texto corto que aparece en la tienda..."></textarea>
+          </div>
 
-                <div class="img-row">
-                  <input type="file" id="p-img-file" accept="image/jpeg,image/png" />
-                  <input type="text" id="p-img" placeholder="URL de la imagen (se completa al subir)" />
-                </div>
+          <div class="img-block">
+            <label>Imagen del producto (JPG o PNG)</label>
 
-                <div id="p-img-status" class="img-status">
-                  Podés subir una imagen desde tu PC; guardaremos la URL automáticamente.
-                </div>
+            <div class="img-row">
+              <input type="file" id="p-img-file" accept="image/jpeg,image/png" />
+              <input type="text" id="p-img" placeholder="URL de la imagen (se completa al subir)" />
+            </div>
 
-                <img id="p-img-preview" class="img-preview" alt="Vista previa" />
-              </div>
+            <div id="p-img-status" class="img-status">
+              Podés subir una imagen desde tu PC; guardaremos la URL automáticamente.
+            </div>
 
-              <div class="row">
-                <div>
-                  <label for="p-active">Activo</label>
-                  <select id="p-active">
-                    <option value="true">Sí, mostrar en la tienda</option>
-                    <option value="false">No, dejar oculto</option>
-                  </select>
-                </div>
+            <img id="p-img-preview" class="img-preview" alt="Vista previa" />
+          </div>
 
-                <div>
-                  <label for="p-featured">Destacado</label>
-                  <select id="p-featured">
-                    <option value="true">Sí, mostrar en destacados</option>
-                    <option value="false">No</option>
-                  </select>
-                </div>
-              </div>
+          <div class="row">
+            <div>
+              <label for="p-active">Activo</label>
+              <select id="p-active">
+                <option value="true">Sí, mostrar en la tienda</option>
+                <option value="false">No, dejar oculto</option>
+              </select>
+            </div>
 
-              <div>
-                <label for="p-delivery">URL de acceso / contenido principal</label>
-                <input id="p-delivery" placeholder="https://drive.google.com/... o link privado" />
-                <div class="help">Este link se usa en el mail de acceso al producto.</div>
-              </div>
+            <div>
+              <label for="p-featured">Destacado</label>
+              <select id="p-featured">
+                <option value="true">Sí, mostrar en destacados</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+          </div>
 
-              <div>
-                <label for="p-email-body">Instructivo (HTML o texto)</label>
-                <textarea id="p-email-body" rows="4" placeholder="Pasos, recomendaciones, detalles del producto..."></textarea>
-                <div class="help">Podés usar HTML básico (&lt;p&gt;, &lt;br&gt;, &lt;strong&gt;).</div>
-              </div>
+          <div>
+            <label for="p-delivery">URL de acceso / contenido principal</label>
+            <input id="p-delivery" placeholder="https://drive.google.com/... o link privado" />
+            <div class="help">Este link se usa en el mail de acceso al producto.</div>
+          </div>
 
-              <div>
-                <label for="p-pdf">URL PDF instructivo (opcional)</label>
-                <input id="p-pdf" placeholder="https://.../instructivo.pdf" />
-                <div class="help">Si lo completás, en el mail se agrega un link para descargar el PDF.</div>
-              </div>
+          <div>
+            <label for="p-email-body">Instructivo (HTML o texto)</label>
+            <textarea id="p-email-body" rows="4" placeholder="Pasos, recomendaciones, detalles del producto..."></textarea>
+            <div class="help">Podés usar HTML básico (&lt;p&gt;, &lt;br&gt;, &lt;strong&gt;).</div>
+          </div>
 
-              <div class="form-footer">
-                <button class="btn primary" type="submit">Guardar producto</button>
-                <button class="btn small" type="button" onclick="resetForm()">Limpiar</button>
-              </div>
+          <div>
+            <label for="p-pdf">URL PDF instructivo (opcional)</label>
+            <input id="p-pdf" placeholder="https://.../instructivo.pdf" />
+            <div class="help">Si lo completás, en el mail se agrega un link para descargar el PDF.</div>
+          </div>
 
-              <p id="admin-form-msg" class="msg" style="margin-top:10px;">
-                Completá los datos y guardá el producto. Luego podés editarlo o eliminarlo desde la lista.
-              </p>
-            </form>
-          </section>
+          <div class="form-footer">
+            <div class="left">
+              <button class="btn primary" type="submit">Guardar producto</button>
+              <button class="btn small" type="button" onclick="resetForm()">Limpiar</button>
+            </div>
+            <div class="right">
+              <button class="btn small danger" type="button" onclick="closeFormModal()">Cerrar</button>
+            </div>
+          </div>
 
-        </div>
+          <p id="admin-form-msg" class="msg">
+            Completá los datos y guardá el producto. Luego podés editarlo o eliminarlo desde la lista.
+          </p>
+        </form>
       </div>
     </div>
   </div>
 
   <script>
-    // ⚠️ IMPORTANTE: Esto está en frontend (se ve). Más abajo te digo cómo “cerrarlo”.
+    // ⚠️ Esto está en frontend (se ve). Después lo blindamos con backend si querés.
     const ADMIN_PASSWORD = "tsfadmin2025";
-
     const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
-    // Cloudinary (unsigned upload)
     const CLOUDINARY_CLOUD_NAME = "drz056xod";
     const CLOUDINARY_UPLOAD_PRESET = "tsf_shop";
     const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
-    // UI
     document.getElementById("api-pill").textContent = API_BASE;
 
-    function handleAdminLogin() {
+    function handleAdminLogin(){
       const input = document.getElementById("admin-password");
       const msg = document.getElementById("admin-login-msg");
 
-      if (input.value === ADMIN_PASSWORD) {
+      if (input.value === ADMIN_PASSWORD){
         document.getElementById("admin-login").style.display = "none";
         document.getElementById("admin-panel").style.display = "block";
         loadAdminProducts();
@@ -605,20 +456,60 @@
       }
     }
 
-    async function loadAdminProducts() {
+    // ===== Modal helpers =====
+    function openFormModal(title){
+      const modal = document.getElementById("form-modal");
+      const t = document.getElementById("modal-title");
+      if (title) t.textContent = title;
+
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden","false");
+
+      // lock scroll
+      document.body.style.overflow = "hidden";
+
+      // focus first input
+      setTimeout(() => {
+        const name = document.getElementById("p-name");
+        if (name) name.focus();
+      }, 50);
+    }
+
+    function closeFormModal(){
+      const modal = document.getElementById("form-modal");
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden","true");
+      document.body.style.overflow = "";
+    }
+
+    // ESC cierra
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape"){
+        const modal = document.getElementById("form-modal");
+        if (modal.classList.contains("is-open")) closeFormModal();
+      }
+    });
+
+    function escapeHtml(str){
+      return String(str || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    async function loadAdminProducts(){
       const tbody = document.getElementById("admin-products-tbody");
       tbody.innerHTML = '<tr><td colspan="6">Cargando productos...</td></tr>';
 
-      try {
+      try{
         const res = await fetch(`${API_BASE}/api/admin-products`);
         const data = await res.json();
-
-        if (!data || !Array.isArray(data.products)) {
-          throw new Error("Respuesta inválida");
-        }
+        if (!data || !Array.isArray(data.products)) throw new Error("Respuesta inválida");
 
         const products = data.products;
-        if (!products.length) {
+        if (!products.length){
           tbody.innerHTML = '<tr><td colspan="6">No hay productos cargados.</td></tr>';
           return;
         }
@@ -626,33 +517,26 @@
         tbody.innerHTML = "";
         products.forEach((p) => {
           const tr = document.createElement("tr");
-
           tr.innerHTML = `
             <td style="font-weight:800;">${escapeHtml(p.name || "")}</td>
             <td>USD ${(Number(p.price_cents || 0) / 100).toFixed(2)}</td>
             <td>${escapeHtml(p.type || "-")}</td>
-            <td>
-              <span class="badge ${p.is_active ? "ok" : "no"}">
-                ${p.is_active ? "Activo" : "Oculto"}
-              </span>
-            </td>
+            <td><span class="badge ${p.is_active ? "ok" : "no"}">${p.is_active ? "Activo" : "Oculto"}</span></td>
             <td>${p.is_featured === false ? "No" : "Sí"}</td>
             <td class="col-actions">
               <button class="btn small" type="button" onclick="editProduct('${p.id}')">Editar</button>
               <button class="btn small danger" type="button" onclick="deleteProduct('${p.id}')">Eliminar</button>
             </td>
           `;
-
           tbody.appendChild(tr);
         });
-      } catch (err) {
+      }catch(err){
         console.error(err);
         tbody.innerHTML = '<tr><td colspan="6">Error al cargar productos.</td></tr>';
       }
     }
 
-    function resetForm() {
-      document.getElementById("form-title").textContent = "Crear nuevo producto";
+    function resetForm(){
       document.getElementById("p-id").value = "";
       document.getElementById("p-name").value = "";
       document.getElementById("p-price").value = "";
@@ -670,49 +554,41 @@
 
       const preview = document.getElementById("p-img-preview");
       const status = document.getElementById("p-img-status");
-      if (preview) {
-        preview.style.display = "none";
-        preview.src = "";
-      }
-      if (status) {
-        status.textContent = "Podés subir una imagen desde tu PC; guardaremos la URL automáticamente.";
-      }
+      if (preview){ preview.style.display = "none"; preview.src = ""; }
+      if (status){ status.textContent = "Podés subir una imagen desde tu PC; guardaremos la URL automáticamente."; }
+
       const fileInput = document.getElementById("p-img-file");
       if (fileInput) fileInput.value = "";
     }
 
-    function escapeHtml(str){
-      return String(str || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    function openFormForNew(){
+      resetForm();
+      openFormModal("Crear nuevo producto");
     }
 
-    // === SUBIDA DE IMAGEN A CLOUDINARY ===
-    async function uploadImageFile(file) {
+    // === SUBIDA A CLOUDINARY ===
+    async function uploadImageFile(file){
       const statusEl = document.getElementById("p-img-status");
       const urlInput = document.getElementById("p-img");
       const preview = document.getElementById("p-img-preview");
 
       if (!file) return;
 
-      if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+      if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET){
         alert("Falta configurar CLOUDINARY_CLOUD_NAME o CLOUDINARY_UPLOAD_PRESET en admin.html");
         return;
       }
 
-      try {
+      try{
         statusEl.textContent = "Subiendo imagen...";
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-        const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: "POST", body: formData });
+        const res = await fetch(CLOUDINARY_UPLOAD_URL, { method:"POST", body: fd });
         const data = await res.json();
 
-        if (!res.ok) {
+        if (!res.ok){
           console.error("Cloudinary error:", data);
           throw new Error("Error al subir la imagen");
         }
@@ -721,11 +597,11 @@
         urlInput.value = imageUrl;
         statusEl.textContent = "Imagen subida correctamente.";
 
-        if (preview) {
+        if (preview){
           preview.src = imageUrl;
           preview.style.display = "block";
         }
-      } catch (err) {
+      }catch(err){
         console.error(err);
         statusEl.textContent = "Error al subir la imagen. Revisá la consola.";
       }
@@ -736,18 +612,17 @@
       const urlInput = document.getElementById("p-img");
       const preview = document.getElementById("p-img-preview");
 
-      if (fileInput) {
+      if (fileInput){
         fileInput.addEventListener("change", (e) => {
           const file = e.target.files && e.target.files[0];
           if (file) uploadImageFile(file);
         });
       }
 
-      // Si pegan URL manual, previsualiza
-      if (urlInput && preview) {
+      if (urlInput && preview){
         urlInput.addEventListener("input", () => {
           const v = urlInput.value.trim();
-          if (!v) {
+          if (!v){
             preview.style.display = "none";
             preview.src = "";
             return;
@@ -758,7 +633,7 @@
       }
     });
 
-    async function handleSaveProduct(event) {
+    async function handleSaveProduct(event){
       event.preventDefault();
 
       const id = document.getElementById("p-id").value.trim();
@@ -773,7 +648,7 @@
       const emailBody = document.getElementById("p-email-body").value.trim();
       const pdfUrl = document.getElementById("p-pdf").value.trim();
 
-      if (!name || !priceUsd) {
+      if (!name || !priceUsd){
         alert("Nombre y precio son obligatorios.");
         return;
       }
@@ -799,10 +674,10 @@
       const msgEl = document.getElementById("admin-form-msg");
       msgEl.textContent = "Guardando producto...";
 
-      try {
+      try{
         const res = await fetch(`${API_BASE}/api/admin-products`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
           body: JSON.stringify(payload),
         });
 
@@ -810,15 +685,16 @@
         if (!res.ok) throw new Error(data.error || "Error al guardar");
 
         msgEl.textContent = "Producto guardado correctamente.";
+        closeFormModal();
         resetForm();
         loadAdminProducts();
-      } catch (err) {
+      }catch(err){
         console.error(err);
         msgEl.textContent = "Error al guardar el producto. Revisá la consola.";
       }
     }
 
-    async function editProduct(id) {
+    async function editProduct(id){
       try{
         const res = await fetch(`${API_BASE}/api/admin-products`);
         const data = await res.json();
@@ -827,11 +703,9 @@
         const product = data.products.find((p) => p.id === id);
         if (!product) return;
 
-        document.getElementById("form-title").textContent = "Editar producto";
         document.getElementById("p-id").value = product.id || "";
         document.getElementById("p-name").value = product.name || "";
-        document.getElementById("p-price").value =
-          product.price_cents != null ? (product.price_cents / 100).toFixed(2) : "";
+        document.getElementById("p-price").value = product.price_cents != null ? (product.price_cents / 100).toFixed(2) : "";
         document.getElementById("p-type").value = product.type || "other";
         document.getElementById("p-desc").value = product.short_description || "";
         document.getElementById("p-img").value = product.image_url || "";
@@ -843,45 +717,42 @@
 
         const preview = document.getElementById("p-img-preview");
         const status = document.getElementById("p-img-status");
-        if (product.image_url && preview) {
+        if (product.image_url && preview){
           preview.src = product.image_url;
           preview.style.display = "block";
           status.textContent = "Imagen cargada. Podés cambiarla subiendo un archivo nuevo.";
         } else {
-          if (preview) { preview.style.display = "none"; preview.src = ""; }
-          if (status) status.textContent = "Podés subir una imagen desde tu PC; guardaremos la URL automáticamente.";
+          if (preview){ preview.style.display = "none"; preview.src = ""; }
+          if (status){ status.textContent = "Podés subir una imagen desde tu PC; guardaremos la URL automáticamente."; }
         }
 
-        document.getElementById("admin-form-msg").textContent =
-          "Editando producto. Guardá los cambios o tocá “Limpiar” para crear uno nuevo.";
-      } catch(e){
+        const msgEl = document.getElementById("admin-form-msg");
+        msgEl.textContent = "Editando producto. Guardá los cambios o tocá “Limpiar” para crear uno nuevo.";
+
+        openFormModal("Editar producto");
+      }catch(e){
         console.error(e);
         alert("No se pudo cargar el producto para editar.");
       }
     }
 
-    async function deleteProduct(id) {
+    async function deleteProduct(id){
       if (!confirm("¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.")) return;
 
-      const msgEl = document.getElementById("admin-form-msg");
-      msgEl.textContent = "Eliminando producto...";
-
-      try {
+      try{
         const res = await fetch(`${API_BASE}/api/admin-products`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          method:"DELETE",
+          headers:{ "Content-Type":"application/json" },
           body: JSON.stringify({ id }),
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Error al eliminar");
 
-        msgEl.textContent = "Producto eliminado correctamente.";
-        resetForm();
         loadAdminProducts();
-      } catch (err) {
+      }catch(err){
         console.error(err);
-        msgEl.textContent = "Error al eliminar el producto. Revisá la consola.";
+        alert("Error al eliminar. Revisá consola.");
       }
     }
   </script>
