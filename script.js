@@ -524,25 +524,25 @@ runSplash();
 });
 function runSplash() {
   const splash = document.getElementById("tsf-splash");
-  if (!splash) return;
+  const app = document.getElementById("tsf-app");
+  if (!splash || !app) return;
 
-  // Activamos blur apenas carga
-  document.body.classList.add("tsf-blur");
+  // Blur SOLO al contenido, no al splash
+  app.classList.add("tsf-blur");
 
-  const DURATION = 2300; // duración splash (ms)
+  const DURATION = 2300;
 
   setTimeout(() => {
     // Fade out del splash
     splash.style.opacity = "0";
 
-    // Quitamos blur suavemente
-    document.body.classList.add("tsf-blur-off");
-    document.body.classList.remove("tsf-blur");
+    // Quitamos blur suave
+    app.classList.add("tsf-blur-off");
+    app.classList.remove("tsf-blur");
 
     setTimeout(() => {
       splash.remove();
-      document.body.classList.remove("tsf-blur-off");
-    }, 400);
-
+      app.classList.remove("tsf-blur-off");
+    }, 420);
   }, DURATION);
 }
