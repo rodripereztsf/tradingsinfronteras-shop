@@ -508,8 +508,10 @@ document.addEventListener("click", (e) => {
 // ===============================
 // INICIALIZACIÓN
 // ===============================
+// ===============================
+// SPLASH (solo 1 vez por sesión)
+// ===============================
 
-document.addEventListener("DOMContentLoaded", () => {
 function runSplash() {
   const splash = document.getElementById("tsf-splash");
   const app = document.getElementById("tsf-app");
@@ -525,12 +527,12 @@ function runSplash() {
     } catch {}
   }, 5000);
 
-  // Intentamos leer sessionStorage sin romper si el browser lo bloquea
+  // sessionStorage safe
   let seen = false;
   try {
     seen = sessionStorage.getItem("tsf_splash_seen") === "1";
   } catch {
-    seen = false; // si no se puede usar, seguimos normal
+    seen = false;
   }
 
   // Si ya se vio en esta sesión: lo quitamos ya mismo
@@ -562,4 +564,27 @@ function runSplash() {
       app.classList.remove("tsf-blur-off");
     }, 450);
   }, DURATION);
+}
+
+// ===============================
+// INICIALIZACIÓN
+// ===============================
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Splash solo al entrar (si está en esta página)
+  runSplash();
+
+  // Año en el footer
+  const yearEl = document.getElementById("year");
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
+  }
+
+  // Cargar carrito y reflejar estado
+  loadCartFromStorage();
+  updateCartBadge();
+  renderCartPage(); // si estamos en cart.html
+
+  // Renderizar productos dinámicamente
+  initProducts();
 });
