@@ -506,8 +506,9 @@ document.addEventListener("click", (e) => {
 });
 
 // ===============================
-// INICIALIZACIÓN
+// SPLASH (siempre que cargás index)
 // ===============================
+
 function runSplash() {
   const splash = document.getElementById("tsf-splash");
   const app = document.getElementById("tsf-app");
@@ -541,3 +542,24 @@ function runSplash() {
     }, 450);
   }, DURATION);
 }
+
+// ===============================
+// INICIALIZACIÓN
+// ===============================
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ✅ Splash SIEMPRE (cada refresh / cada vez que volvés a index)
+  runSplash();
+
+  // Año en el footer
+  const yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  // Carrito
+  loadCartFromStorage();
+  updateCartBadge();
+  renderCartPage();
+
+  // Productos
+  initProducts();
+});
