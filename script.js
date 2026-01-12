@@ -510,22 +510,19 @@ document.addEventListener("click", (e) => {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-runSplash();
-  const yearEl = document.getElementById("year");
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
-  }
-
-  loadCartFromStorage();
-  updateCartBadge();
-  renderCartPage();
-
-  initProducts();
-});
 function runSplash() {
   const splash = document.getElementById("tsf-splash");
   const app = document.getElementById("tsf-app");
   if (!splash || !app) return;
+
+  // ✅ si ya se vio en esta sesión, no lo mostramos
+  const seen = sessionStorage.getItem("tsf_splash_seen");
+  if (seen === "1") {
+    splash.remove();
+    return;
+  }
+
+  sessionStorage.setItem("tsf_splash_seen", "1");
 
   // Blur SOLO al contenido, no al splash
   app.classList.add("tsf-blur");
@@ -533,10 +530,8 @@ function runSplash() {
   const DURATION = 2300;
 
   setTimeout(() => {
-    // Fade out del splash
     splash.style.opacity = "0";
 
-    // Quitamos blur suave
     app.classList.add("tsf-blur-off");
     app.classList.remove("tsf-blur");
 
