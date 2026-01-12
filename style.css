@@ -675,3 +675,17 @@ a {
     transform: none;
   }
 }
+/* ==========================
+   FADE + BLUR POST SPLASH
+   ========================== */
+
+/* Estado inicial: la web está levemente desenfocada */
+body.tsf-blur {
+  filter: blur(6px);
+  transition: filter 0.35s ease;
+}
+
+/* Cuando el blur se quita */
+body.tsf-blur-off {
+  filter: blur(0);
+}
