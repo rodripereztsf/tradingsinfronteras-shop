@@ -515,14 +515,35 @@ function runSplash() {
   const app = document.getElementById("tsf-app");
   if (!splash || !app) return;
 
-  // ✅ si ya se vio en esta sesión, no lo mostramos
-  const seen = sessionStorage.getItem("tsf_splash_seen");
-  if (seen === "1") {
+  // Fail-safe: pase lo que pase, el splash se va en 5s
+  const HARD_TIMEOUT = setTimeout(() => {
+    try {
+      splash.style.opacity = "0";
+      app.classList.remove("tsf-blur");
+      app.classList.remove("tsf-blur-off");
+      setTimeout(() => splash.remove(), 450);
+    } catch {}
+  }, 5000);
+
+  // Intentamos leer sessionStorage sin romper si el browser lo bloquea
+  let seen = false;
+  try {
+    seen = sessionStorage.getItem("tsf_splash_seen") === "1";
+  } catch {
+    seen = false; // si no se puede usar, seguimos normal
+  }
+
+  // Si ya se vio en esta sesión: lo quitamos ya mismo
+  if (seen) {
+    clearTimeout(HARD_TIMEOUT);
     splash.remove();
     return;
   }
 
-  sessionStorage.setItem("tsf_splash_seen", "1");
+  // Marcamos como visto (si se puede)
+  try {
+    sessionStorage.setItem("tsf_splash_seen", "1");
+  } catch {}
 
   // Blur SOLO al contenido, no al splash
   app.classList.add("tsf-blur");
@@ -536,8 +557,9 @@ function runSplash() {
     app.classList.remove("tsf-blur");
 
     setTimeout(() => {
+      clearTimeout(HARD_TIMEOUT);
       splash.remove();
       app.classList.remove("tsf-blur-off");
-    }, 420);
+    }, 450);
   }, DURATION);
 }
