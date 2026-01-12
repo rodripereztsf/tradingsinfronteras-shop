@@ -526,12 +526,23 @@ function runSplash() {
   const splash = document.getElementById("tsf-splash");
   if (!splash) return;
 
-  // duración total del splash (ms)
-  const DURATION = 2300;
+  // Activamos blur apenas carga
+  document.body.classList.add("tsf-blur");
 
-  // si el usuario recarga rápido o navega, evitamos que quede pegado
+  const DURATION = 2300; // duración splash (ms)
+
   setTimeout(() => {
+    // Fade out del splash
     splash.style.opacity = "0";
-    setTimeout(() => splash.remove(), 380);
+
+    // Quitamos blur suavemente
+    document.body.classList.add("tsf-blur-off");
+    document.body.classList.remove("tsf-blur");
+
+    setTimeout(() => {
+      splash.remove();
+      document.body.classList.remove("tsf-blur-off");
+    }, 400);
+
   }, DURATION);
 }
