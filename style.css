@@ -628,7 +628,7 @@ a {
   box-shadow: 0 0 0 1px #00cfff;
 }
 /* ==========================
-   SPLASH (intro 2-3s)
+   SPLASH (intro 2–3s)
    ========================== */
 
 #tsf-splash{
@@ -643,22 +643,35 @@ a {
 }
 
 #tsf-splash img{
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
+  width: 260px;          /* tamaño grande */
+  max-width: 80vw;       /* responsive */
+  height: auto;          /* 👈 CLAVE: mantiene proporción */
   transform: scale(0.85);
-  opacity: 0.92;
-  animation: tsfSplashZoom 2.2s ease-in-out forwards;
-  box-shadow: 0 18px 60px rgba(0,0,0,.75);
+  opacity: 0.9;
+  animation: tsfSplashZoom 2.3s ease-in-out forwards;
+  filter: drop-shadow(0 18px 60px rgba(0,0,0,.85));
 }
 
+/* Animación suave, elegante */
 @keyframes tsfSplashZoom{
-  0%   { transform: scale(0.78); opacity: 0.65; }
-  45%  { transform: scale(1.10); opacity: 1; }
-  100% { transform: scale(0.92); opacity: 0.92; }
+  0% {
+    transform: scale(0.75);
+    opacity: 0.5;
+  }
+  45% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.95;
+  }
 }
 
-/* Respeta “reducir movimiento” */
+/* Accesibilidad */
 @media (prefers-reduced-motion: reduce){
-  #tsf-splash img{ animation: none; transform: none; }
+  #tsf-splash img{
+    animation: none;
+    transform: none;
+  }
 }
