@@ -508,14 +508,13 @@ document.addEventListener("click", (e) => {
 // ===============================
 // INICIALIZACIÓN
 // ===============================
-// ===============================
-// SPLASH (solo 1 vez por sesión)
-// ===============================
-
 function runSplash() {
   const splash = document.getElementById("tsf-splash");
   const app = document.getElementById("tsf-app");
   if (!splash || !app) return;
+
+  // Blur SOLO al contenido, no al splash
+  app.classList.add("tsf-blur");
 
   // Fail-safe: pase lo que pase, el splash se va en 5s
   const HARD_TIMEOUT = setTimeout(() => {
@@ -526,29 +525,6 @@ function runSplash() {
       setTimeout(() => splash.remove(), 450);
     } catch {}
   }, 5000);
-
-  // sessionStorage safe
-  let seen = false;
-  try {
-    seen = sessionStorage.getItem("tsf_splash_seen") === "1";
-  } catch {
-    seen = false;
-  }
-
-  // Si ya se vio en esta sesión: lo quitamos ya mismo
-  if (seen) {
-    clearTimeout(HARD_TIMEOUT);
-    splash.remove();
-    return;
-  }
-
-  // Marcamos como visto (si se puede)
-  try {
-    sessionStorage.setItem("tsf_splash_seen", "1");
-  } catch {}
-
-  // Blur SOLO al contenido, no al splash
-  app.classList.add("tsf-blur");
 
   const DURATION = 2300;
 
@@ -565,26 +541,3 @@ function runSplash() {
     }, 450);
   }, DURATION);
 }
-
-// ===============================
-// INICIALIZACIÓN
-// ===============================
-
-document.addEventListener("DOMContentLoaded", () => {
-  // Splash solo al entrar (si está en esta página)
-  runSplash();
-
-  // Año en el footer
-  const yearEl = document.getElementById("year");
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
-  }
-
-  // Cargar carrito y reflejar estado
-  loadCartFromStorage();
-  updateCartBadge();
-  renderCartPage(); // si estamos en cart.html
-
-  // Renderizar productos dinámicamente
-  initProducts();
-});
