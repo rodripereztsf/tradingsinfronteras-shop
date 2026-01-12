@@ -1,5 +1,4 @@
 // api/create-stripe-checkout.js
-
 import Stripe from "stripe";
 
 function setCors(res) {
@@ -12,25 +11,42 @@ function toCurrency(val) {
   return String(val || "usd").trim().toLowerCase();
 }
 
+// Normaliza WhatsApp venga como venga
+function pickWhatsapp(body, customer) {
+  const w =
+    customer?.whatsapp ||
+    customer?.buyerWhatsApp ||
+    customer?.buyer_whatsapp ||
+    customer?.whatsApp ||
+    body?.buyerWhatsApp ||
+    body?.buyer_whatsapp ||
+    body?.whatsapp ||
+    "";
+
+  return String(w || "").trim();
+}
+
 export default async function handler(req, res) {
   setCors(res);
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "Method not allowed" });
 
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
-      return res.status(500).json({ error: "Missing STRIPE_SECRET_KEY in Vercel env" });
+      return res
+        .status(500)
+        .json({ error: "Missing STRIPE_SECRET_KEY in Vercel env" });
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
     const body = req.body || {};
 
     // --- Soportar FORMATO NUEVO (customer/cart) ---
     let customer = body.customer || null;
     let cart = body.cart || null;
-    let currency = toCurrency(body.currency);
+    const currency = toCurrency(body.currency);
 
     // --- Soportar FORMATO VIEJO (items + buyerX) ---
     if (!customer && (body.buyerName || body.buyerEmail || body.buyerWhatsApp)) {
@@ -40,11 +56,11 @@ export default async function handler(req, res) {
         whatsapp: body.buyerWhatsApp,
       };
     }
+
     if (!cart && Array.isArray(body.items)) {
       cart = body.items.map((it) => ({
         name: it.name,
-        // el viejo mandaba price en centavos
-        price: it.price,
+        price: it.price, // centavos
         qty: it.quantity || 1,
       }));
     }
@@ -61,6 +77,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Empty cart" });
     }
 
+    // WhatsApp blindado
+    const whatsapp = pickWhatsapp(body, customer);
+
     // Line items: tu precio ya está en centavos
     const line_items = cart.map((item, idx) => {
       const name = String(item?.name || `Item ${idx + 1}`);
@@ -68,7 +87,9 @@ export default async function handler(req, res) {
 
       const priceCents = Number(item?.price);
       if (!Number.isFinite(priceCents) || priceCents <= 0) {
-        throw new Error(`Invalid price (cents) for "${name}". Got: ${item?.price}`);
+        throw new Error(
+          `Invalid price (cents) for "${name}". Got: ${item?.price}`
+        );
       }
 
       return {
@@ -81,10 +102,11 @@ export default async function handler(req, res) {
       };
     });
 
-    // URLs: usar variable de entorno (lo más estable)
+    // URLs: ojo con el baseUrl (ideal: tu url completa con /tradingsinfronteras-shop)
     const baseUrl =
+      (process.env.ACCESS_BASE_URL && process.env.ACCESS_BASE_URL.trim()) ||
       (process.env.PUBLIC_SITE_URL && process.env.PUBLIC_SITE_URL.trim()) ||
-      "https://rodripereztsf.github.io";
+      "https://rodripereztsf.github.io/tradingsinfronteras-shop";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -92,11 +114,23 @@ export default async function handler(req, res) {
       success_url: `${baseUrl}/checkout-success-stripe.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cart.html`,
       customer_email: customer.email,
+
+      // Metadata en Session (sirve para completed/expired)
       metadata: {
         name: String(customer.name),
         email: String(customer.email),
-        whatsapp: String(customer.whatsapp || ""),
+        whatsapp, // ✅ SIEMPRE ACÁ
         currency,
+      },
+
+      // Metadata en PaymentIntent (sirve para payment_failed)
+      payment_intent_data: {
+        metadata: {
+          name: String(customer.name),
+          email: String(customer.email),
+          whatsapp, // ✅ SIEMPRE ACÁ TAMBIÉN
+          currency,
+        },
       },
     });
 
