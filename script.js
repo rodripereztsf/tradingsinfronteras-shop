@@ -416,6 +416,17 @@ if (nameInput && emailInput && whatsappInput) {
 
 const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
+function setPayButtonLoading(isLoading, labelText) {
+  const btn = document.getElementById("pay-button");
+  if (!btn) return;
+
+  const label = btn.querySelector(".btn-label");
+  if (label && labelText) label.textContent = labelText;
+
+  btn.classList.toggle("is-loading", !!isLoading);
+  btn.disabled = !!isLoading;
+}
+
 // helper: fetch con debug de error aunque no sea JSON
 async function fetchJsonDebug(url, options) {
   const res = await fetch(url, options);
@@ -458,6 +469,9 @@ async function payWithStripe(currency = "usd") {
     return;
   }
 
+  // ✅ Activamos loading
+  setPayButtonLoading(true, "Redirigiendo…");
+
   try {
     const payload = {
       customer: {
@@ -489,21 +503,30 @@ async function payWithStripe(currency = "usd") {
 
     console.error("Respuesta Stripe inesperada:", data);
     alert("Respuesta Stripe inesperada. Mirá consola.");
+
+    // ✅ Si no redirige, apagamos loading
+    setPayButtonLoading(false, "PAGAR (ARS o USD)");
   } catch (e) {
     console.error("payWithStripe error:", e);
     alert(e?.message || "Error al conectar con Stripe. Intentá nuevamente.");
+
+    // ✅ Si falla, apagamos loading
+    setPayButtonLoading(false, "PAGAR (ARS o USD)");
   }
 }
 
 // Conectar botones (si existen)
 document.addEventListener("click", (e) => {
   const t = e.target;
+  if (!t) return;
 
-  if (t && t.id === "pay-usd") payWithStripe("usd");
-  if (t && t.id === "pay-ars") payWithStripe("ars");
+  if (t.id === "pay-usd") payWithStripe("usd");
+  if (t.id === "pay-ars") payWithStripe("ars");
 
-  if (t && t.id === "pay-button") payWithStripe("usd");
+  // Si usás un solo botón:
+  if (t.id === "pay-button") payWithStripe("usd");
 });
+
 
 // ===============================
 // SPLASH (siempre que cargás index)
