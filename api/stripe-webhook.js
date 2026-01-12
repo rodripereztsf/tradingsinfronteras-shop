@@ -4,10 +4,15 @@ import nodemailer from "nodemailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+export const config = {
+  api: { bodyParser: false },
+};
+
+function setCors(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+}
+
 function buildTransporter() {
-  // Si usás Gmail SMTP:
-  // SMTP_EMAIL = tu gmail
-  // SMTP_PASS = app password
   return nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -31,52 +36,70 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-async function getLineItemsTable(sessionId, currencyFallback = "usd") {
-  const li = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 100 });
+async function getLineItemsRows(sessionId, currencyFallback = "usd") {
+  try {
+    const li = await stripe.checkout.sessions.listLineItems(sessionId, {
+      limit: 100,
+    });
 
-  if (!li?.data?.length) {
+    if (!li?.data?.length) {
+      return {
+        rowsHtml: `<tr><td colspan="3">(sin items)</td></tr>`,
+        totalFromItemsCents: 0,
+        currency: currencyFallback,
+      };
+    }
+
+    let total = 0;
+    let currency = currencyFallback;
+
+    const rowsHtml = li.data
+      .map((it) => {
+        const name = escapeHtml(it.description || "Producto");
+        const qty = Number(it.quantity || 1);
+        const amount = Number(it.amount_total ?? it.amount_subtotal ?? 0);
+
+        total += amount;
+        currency = it.currency || currency;
+
+        return `
+          <tr>
+            <td>${name}</td>
+            <td style="text-align:center;">${qty}</td>
+            <td style="text-align:right;">${money(amount, currency)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    return { rowsHtml, totalFromItemsCents: total, currency };
+  } catch (e) {
+    // Si Stripe no permite listar items por algún motivo, no rompemos el webhook
     return {
-      rowsHtml: `<tr><td colspan="3">(sin items)</td></tr>`,
+      rowsHtml: `<tr><td colspan="3">(no disponible)</td></tr>`,
       totalFromItemsCents: 0,
       currency: currencyFallback,
     };
   }
-
-  let total = 0;
-  let currency = currencyFallback;
-
-  const rowsHtml = li.data
-    .map((it) => {
-      const name = escapeHtml(it.description || it.price?.product?.name || "Producto");
-      const qty = Number(it.quantity || 1);
-      const amount = Number(it.amount_total ?? it.amount_subtotal ?? 0);
-      total += amount;
-      currency = it.currency || currency;
-
-      return `
-        <tr>
-          <td>${name}</td>
-          <td style="text-align:center;">${qty}</td>
-          <td style="text-align:right;">${money(amount, currency)}</td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  return { rowsHtml, totalFromItemsCents: total, currency };
 }
 
-function adminEmailHtml({ eventType, name, email, whatsapp, totalLabel, rowsHtml }) {
+function emailHtml({ title, eventType, statusLabel, name, email, whatsapp, totalLabel, rowsHtml, extraLines }) {
+  const extra = (extraLines || [])
+    .map((l) => `<p style="margin:6px 0; opacity:.9;">${escapeHtml(l)}</p>`)
+    .join("");
+
   return `
   <div style="font-family:Arial,sans-serif; background:#0b0b0b; color:#fff; padding:24px;">
-    <h2 style="margin:0 0 8px 0;">TRADING SIN FRONTERAS SHOP · Notificación</h2>
-    <p style="margin:0 0 16px 0; opacity:.85;">Evento: ${escapeHtml(eventType)}</p>
+    <h2 style="margin:0 0 8px 0;">${escapeHtml(title)}</h2>
+    <p style="margin:0 0 10px 0; opacity:.85;">Evento: ${escapeHtml(eventType)}</p>
+    <p style="margin:0 0 16px 0; opacity:.85;">Estado: <b>${escapeHtml(statusLabel)}</b></p>
 
     <div style="background:#111; border:1px solid #222; border-radius:12px; padding:16px; margin-bottom:18px;">
       <p style="margin:6px 0;"><b>Nombre:</b> ${escapeHtml(name)}</p>
       <p style="margin:6px 0;"><b>Email:</b> ${escapeHtml(email)}</p>
-      <p style="margin:6px 0;"><b>WhatsApp:</b> ${escapeHtml(whatsapp || "-")}</p>
+      <p style="margin:6px 0;"><b>WhatsApp:</b> ${escapeHtml(whatsapp || "—")}</p>
       <p style="margin:10px 0 0 0;"><b>Total:</b> ${escapeHtml(totalLabel)}</p>
+      ${extra}
     </div>
 
     <h3 style="margin:0 0 10px 0;">Carrito</h3>
@@ -98,21 +121,34 @@ function adminEmailHtml({ eventType, name, email, whatsapp, totalLabel, rowsHtml
   `;
 }
 
-export const config = {
-  api: { bodyParser: false },
-};
+async function sendAdminEmail({ subject, html }) {
+  const transporter = buildTransporter();
+  const to = process.env.ADMIN_EMAIL || process.env.SMTP_EMAIL;
+
+  await transporter.sendMail({
+    from: `TSF SHOP <${process.env.SMTP_EMAIL}>`,
+    to,
+    subject,
+    html,
+  });
+}
+
+async function readRawBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
 
 export default async function handler(req, res) {
+  setCors(res);
+
   if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
   const sig = req.headers["stripe-signature"];
   let event;
 
   try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const rawBody = Buffer.concat(chunks);
-
+    const rawBody = await readRawBody(req);
     event = stripe.webhooks.constructEvent(
       rawBody,
       sig,
@@ -124,11 +160,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Solo nos importa el pago completado para mail admin (por ahora)
+    // 1) COMPRA EXITOSA
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
-      // Datos del comprador: priorizamos metadata, pero fallback a customer_details
       const name =
         session?.metadata?.name ||
         session?.customer_details?.name ||
@@ -143,13 +178,10 @@ export default async function handler(req, res) {
         session?.metadata?.buyerWhatsApp ||
         "—";
 
-      // Traer items reales desde Stripe
-      const { rowsHtml, totalFromItemsCents, currency } = await getLineItemsTable(
-        session.id,
-        session?.currency || session?.metadata?.currency || "usd"
-      );
+      const currency = session?.currency || session?.metadata?.currency || "usd";
 
-      // Total: si session trae amount_total lo usamos, si no usamos suma de items
+      const { rowsHtml, totalFromItemsCents } = await getLineItemsRows(session.id, currency);
+
       const totalCents =
         Number(session?.amount_total ?? 0) > 0
           ? Number(session.amount_total)
@@ -157,21 +189,99 @@ export default async function handler(req, res) {
 
       const totalLabel = money(totalCents, currency);
 
-      // Enviar mail al ADMIN (tu casilla TSF)
-      const transporter = buildTransporter();
-
-      const adminTo = process.env.ADMIN_EMAIL || process.env.SMTP_EMAIL; // recomendación: crear ADMIN_EMAIL
-      await transporter.sendMail({
-        from: `TSF SHOP <${process.env.SMTP_EMAIL}>`,
-        to: adminTo,
-        subject: `Nueva compra - ${totalLabel}`,
-        html: adminEmailHtml({
+      await sendAdminEmail({
+        subject: `✅ Compra confirmada - ${totalLabel}`,
+        html: emailHtml({
+          title: "TRADING SIN FRONTERAS SHOP · Notificación",
           eventType: event.type,
+          statusLabel: "PAGO COMPLETADO",
           name,
           email,
           whatsapp,
           totalLabel,
           rowsHtml,
+          extraLines: [`Session ID: ${session.id}`],
+        }),
+      });
+    }
+
+    // 2) CHECKOUT EXPIRADO
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object;
+
+      const name =
+        session?.metadata?.name ||
+        session?.customer_details?.name ||
+        "Cliente";
+      const email =
+        session?.metadata?.email ||
+        session?.customer_details?.email ||
+        session?.customer_email ||
+        "—";
+      const whatsapp =
+        session?.metadata?.whatsapp ||
+        session?.metadata?.buyerWhatsApp ||
+        "—";
+
+      const currency = session?.currency || session?.metadata?.currency || "usd";
+
+      const { rowsHtml, totalFromItemsCents } = await getLineItemsRows(session.id, currency);
+
+      const totalCents =
+        Number(session?.amount_total ?? 0) > 0
+          ? Number(session.amount_total)
+          : totalFromItemsCents;
+
+      const totalLabel = money(totalCents, currency);
+
+      await sendAdminEmail({
+        subject: `⏳ Checkout expirado - ${totalLabel}`,
+        html: emailHtml({
+          title: "TRADING SIN FRONTERAS SHOP · Alerta",
+          eventType: event.type,
+          statusLabel: "EXPIRADO (NO PAGADO)",
+          name,
+          email,
+          whatsapp,
+          totalLabel,
+          rowsHtml,
+          extraLines: [`Session ID: ${session.id}`],
+        }),
+      });
+    }
+
+    // 3) PAGO FALLIDO (PaymentIntent)
+    if (event.type === "payment_intent.payment_failed") {
+      const pi = event.data.object;
+
+      // Acá no siempre tenemos line items (porque no es session), pero sí tenemos monto y motivo
+      const amount = Number(pi.amount ?? 0);
+      const currency = pi.currency || "usd";
+      const totalLabel = money(amount, currency);
+
+      const lastErr = pi.last_payment_error;
+      const reason =
+        lastErr?.message ||
+        lastErr?.code ||
+        "Pago fallido (sin detalle)";
+
+      // Intentamos extraer datos del metadata (si los seteaste)
+      const name = pi?.metadata?.name || "Cliente";
+      const email = pi?.metadata?.email || "—";
+      const whatsapp = pi?.metadata?.whatsapp || "—";
+
+      await sendAdminEmail({
+        subject: `❌ Pago fallido - ${totalLabel}`,
+        html: emailHtml({
+          title: "TRADING SIN FRONTERAS SHOP · Alerta",
+          eventType: event.type,
+          statusLabel: "PAGO FALLIDO",
+          name,
+          email,
+          whatsapp,
+          totalLabel,
+          rowsHtml: `<tr><td colspan="3">(no disponible en este evento)</td></tr>`,
+          extraLines: [`Motivo: ${reason}`, `PaymentIntent: ${pi.id}`],
         }),
       });
     }
