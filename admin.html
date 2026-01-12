@@ -126,6 +126,50 @@
       font-size:.78rem;color: rgba(255,255,255,.72);
       white-space:nowrap;
     }
+.controls{
+  margin-top: 10px;
+  margin-bottom: 12px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.controls-left, .controls-right{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:flex-end;
+}
+.control{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width: 180px;
+}
+.ctl-label{
+  font-size:.78rem;
+  font-weight:800;
+  color: rgba(255,255,255,.72);
+}
+#q{
+  border-radius: 999px;
+  padding: 10px 12px;
+}
+.controls select{
+  border-radius: 999px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.35);
+}
+#count-pill{
+  font-weight: 900;
+}
+
+@media (max-width: 520px){
+  .control{min-width: 100%;}
+  .controls-left, .controls-right{width:100%;}
+  #count-pill{width:100%; justify-content:center;}
+}
 
     /* LOGIN */
     .login{
@@ -287,6 +331,60 @@
       <div class="panel-inner">
         <section class="card">
           <h2>Productos actuales</h2>
+<!-- Controles: buscar / filtrar / ordenar -->
+<div class="controls">
+  <div class="controls-left">
+    <div class="control">
+      <label class="ctl-label" for="q">Buscar</label>
+      <input id="q" type="text" placeholder="Nombre, tipo o precio..." />
+    </div>
+
+    <div class="control">
+      <label class="ctl-label" for="f-type">Tipo</label>
+      <select id="f-type">
+        <option value="all">Todos</option>
+        <option value="course">Formación / Curso</option>
+        <option value="indicator">Indicador</option>
+        <option value="bot">Bot / Robot</option>
+        <option value="physical">Producto físico</option>
+        <option value="other">Otro</option>
+      </select>
+    </div>
+
+    <div class="control">
+      <label class="ctl-label" for="f-active">Activo</label>
+      <select id="f-active">
+        <option value="all">Todos</option>
+        <option value="true">Activos</option>
+        <option value="false">Ocultos</option>
+      </select>
+    </div>
+
+    <div class="control">
+      <label class="ctl-label" for="f-featured">Destacado</label>
+      <select id="f-featured">
+        <option value="all">Todos</option>
+        <option value="true">Destacados</option>
+        <option value="false">No destacados</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="controls-right">
+    <div class="control">
+      <label class="ctl-label" for="sort">Orden</label>
+      <select id="sort">
+        <option value="name_asc">Nombre A→Z</option>
+        <option value="name_desc">Nombre Z→A</option>
+        <option value="price_asc">Precio ↑</option>
+        <option value="price_desc">Precio ↓</option>
+      </select>
+    </div>
+
+    <button class="btn small" type="button" id="clear-filters">Limpiar</button>
+    <span class="pill" id="count-pill">0 productos</span>
+  </div>
+</div>
 
           <div class="table-wrap">
             <table>
@@ -499,72 +597,167 @@
         .replaceAll("'","&#039;");
     }
 
-    async function loadAdminProducts(){
-      const tbody = document.getElementById("admin-products-tbody");
-      tbody.innerHTML = '<tr><td colspan="6">Cargando productos...</td></tr>';
+    let __adminProductsCache = [];
 
-      try{
-        const res = await fetch(`${API_BASE}/api/admin-products`);
-        const data = await res.json();
-        if (!data || !Array.isArray(data.products)) throw new Error("Respuesta inválida");
+function getFilters() {
+  return {
+    q: (document.getElementById("q")?.value || "").trim().toLowerCase(),
+    type: document.getElementById("f-type")?.value || "all",
+    active: document.getElementById("f-active")?.value || "all",
+    featured: document.getElementById("f-featured")?.value || "all",
+    sort: document.getElementById("sort")?.value || "name_asc",
+  };
+}
 
-        const products = data.products;
-        if (!products.length){
-          tbody.innerHTML = '<tr><td colspan="6">No hay productos cargados.</td></tr>';
-          return;
-        }
+function applyFiltersAndSort(products) {
+  const f = getFilters();
 
-        tbody.innerHTML = "";
-        products.forEach((p) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td style="font-weight:800;">${escapeHtml(p.name || "")}</td>
-            <td>USD ${(Number(p.price_cents || 0) / 100).toFixed(2)}</td>
-            <td>${escapeHtml(p.type || "-")}</td>
-            <td><span class="badge ${p.is_active ? "ok" : "no"}">${p.is_active ? "Activo" : "Oculto"}</span></td>
-            <td>${p.is_featured === false ? "No" : "Sí"}</td>
-            <td class="col-actions">
-              <button class="btn small" type="button" onclick="editProduct('${p.id}')">Editar</button>
-              <button class="btn small danger" type="button" onclick="deleteProduct('${p.id}')">Eliminar</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }catch(err){
-        console.error(err);
-        tbody.innerHTML = '<tr><td colspan="6">Error al cargar productos.</td></tr>';
-      }
+  let out = [...products];
+
+  // filter: type
+  if (f.type !== "all") {
+    out = out.filter(p => (p.type || "other") === f.type);
+  }
+
+  // filter: active
+  if (f.active !== "all") {
+    const want = f.active === "true";
+    out = out.filter(p => !!p.is_active === want);
+  }
+
+  // filter: featured
+  if (f.featured !== "all") {
+    const want = f.featured === "true";
+    out = out.filter(p => (p.is_featured === false ? false : true) === want);
+  }
+
+  // search (name/type/price)
+  if (f.q) {
+    out = out.filter(p => {
+      const name = String(p.name || "").toLowerCase();
+      const type = String(p.type || "").toLowerCase();
+      const price = String((Number(p.price_cents || 0) / 100).toFixed(2)).toLowerCase();
+      return name.includes(f.q) || type.includes(f.q) || price.includes(f.q);
+    });
+  }
+
+  // sort
+  out.sort((a,b) => {
+    const an = String(a.name || "").toLowerCase();
+    const bn = String(b.name || "").toLowerCase();
+    const ap = Number(a.price_cents || 0);
+    const bp = Number(b.price_cents || 0);
+
+    switch (f.sort) {
+      case "name_desc": return bn.localeCompare(an);
+      case "price_asc": return ap - bp;
+      case "price_desc": return bp - ap;
+      case "name_asc":
+      default: return an.localeCompare(bn);
     }
+  });
 
-    function resetForm(){
-      document.getElementById("p-id").value = "";
-      document.getElementById("p-name").value = "";
-      document.getElementById("p-price").value = "";
-      document.getElementById("p-type").value = "course";
-      document.getElementById("p-desc").value = "";
-      document.getElementById("p-img").value = "";
-      document.getElementById("p-active").value = "true";
-      document.getElementById("p-featured").value = "true";
-      document.getElementById("p-delivery").value = "";
-      document.getElementById("p-email-body").value = "";
-      document.getElementById("p-pdf").value = "";
+  return out;
+}
 
-      const msgEl = document.getElementById("admin-form-msg");
-      msgEl.textContent = "Completá los datos y guardá el producto. Luego podés editarlo o eliminarlo desde la lista.";
+function renderAdminTable(products) {
+  const tbody = document.getElementById("admin-products-tbody");
+  const countPill = document.getElementById("count-pill");
 
-      const preview = document.getElementById("p-img-preview");
-      const status = document.getElementById("p-img-status");
-      if (preview){ preview.style.display = "none"; preview.src = ""; }
-      if (status){ status.textContent = "Podés subir una imagen desde tu PC; guardaremos la URL automáticamente."; }
+  if (!tbody) return;
 
-      const fileInput = document.getElementById("p-img-file");
-      if (fileInput) fileInput.value = "";
-    }
+  if (!products.length) {
+    tbody.innerHTML = '<tr><td colspan="6">No hay resultados con esos filtros.</td></tr>';
+    if (countPill) countPill.textContent = "0 productos";
+    return;
+  }
 
-    function openFormForNew(){
-      resetForm();
-      openFormModal("Crear nuevo producto");
-    }
+  tbody.innerHTML = "";
+
+  products.forEach((p) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td style="font-weight:800;">${escapeHtml(p.name || "")}</td>
+      <td>USD ${(Number(p.price_cents || 0) / 100).toFixed(2)}</td>
+      <td>${escapeHtml(p.type || "-")}</td>
+      <td>
+        <span class="badge ${p.is_active ? "ok" : "no"}">
+          ${p.is_active ? "Activo" : "Oculto"}
+        </span>
+      </td>
+      <td>${p.is_featured === false ? "No" : "Sí"}</td>
+      <td class="col-actions">
+        <button class="btn small" type="button" onclick="editProduct('${p.id}')">Editar</button>
+        <button class="btn small danger" type="button" onclick="deleteProduct('${p.id}')">Eliminar</button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  if (countPill) countPill.textContent = `${products.length} producto${products.length === 1 ? "" : "s"}`;
+}
+
+async function loadAdminProducts() {
+  const tbody = document.getElementById("admin-products-tbody");
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6">Cargando productos...</td></tr>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin-products`);
+    const data = await res.json();
+
+    if (!data || !Array.isArray(data.products)) throw new Error("Respuesta inválida");
+    __adminProductsCache = data.products || [];
+
+    // aplica filtros actuales
+    const filtered = applyFiltersAndSort(__adminProductsCache);
+    renderAdminTable(filtered);
+  } catch (err) {
+    console.error(err);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6">Error al cargar productos.</td></tr>';
+  }
+}
+
+function refreshAdminTableFromControls() {
+  const filtered = applyFiltersAndSort(__adminProductsCache || []);
+  renderAdminTable(filtered);
+}
+
+function wireAdminControls() {
+  const ids = ["q", "f-type", "f-active", "f-featured", "sort"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener(id === "q" ? "input" : "change", refreshAdminTableFromControls);
+  });
+
+  const clearBtn = document.getElementById("clear-filters");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      const q = document.getElementById("q");
+      const t = document.getElementById("f-type");
+      const a = document.getElementById("f-active");
+      const f = document.getElementById("f-featured");
+      const s = document.getElementById("sort");
+
+      if (q) q.value = "";
+      if (t) t.value = "all";
+      if (a) a.value = "all";
+      if (f) f.value = "all";
+      if (s) s.value = "name_asc";
+
+      refreshAdminTableFromControls();
+    });
+  }
+}
+
+// Importante: llamalo una vez cuando ya existe el HTML (después de login OK)
+function afterAdminLoginInit() {
+  wireAdminControls();
+  loadAdminProducts();
+}
+
 
     // === SUBIDA A CLOUDINARY ===
     async function uploadImageFile(file){
