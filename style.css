@@ -676,16 +676,14 @@ a {
   }
 }
 /* ==========================
-   FADE + BLUR POST SPLASH
+   FADE + BLUR POST SPLASH (FIX)
    ========================== */
 
-/* Estado inicial: la web está levemente desenfocada */
-body.tsf-blur {
+#tsf-app.tsf-blur {
   filter: blur(6px);
   transition: filter 0.35s ease;
 }
 
-/* Cuando el blur se quita */
-body.tsf-blur-off {
+#tsf-app.tsf-blur-off {
   filter: blur(0);
 }
