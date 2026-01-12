@@ -16,23 +16,25 @@ function ensureToast() {
   toast = document.createElement("div");
   toast.id = "tsf-toast";
   toast.style.cssText = `
-    position: fixed;
-    left: 50%;
-    bottom: 22px;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,.85);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,.15);
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 14px;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .2s ease;
-    max-width: 92vw;
-    text-align: center;
-  `;
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,.88);
+  color: #fff;
+  border: 1px solid rgba(0,207,255,.35);
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  max-width: 92vw;
+  text-align: center;
+  box-shadow: 0 16px 50px rgba(0,0,0,.65);
+`;
+
   document.body.appendChild(toast);
   return toast;
 }
@@ -174,12 +176,13 @@ function renderCartPage() {
       <div class="cart-item-info">
         <h3 class="cart-item-name">${item.name}</h3>
 
-        <div class="qty-controls">
-          <button class="qty-btn" type="button" onclick="changeQty(${index}, -1)">−</button>
-          <span class="qty-value">${item.quantity || 1}</span>
-          <button class="qty-btn" type="button" onclick="changeQty(${index}, 1)">+</button>
-        </div>
-      </div>
+    <div class="qty-controls">
+  <span class="qty-label">Cantidad</span>
+  <button class="qty-btn" type="button" aria-label="Disminuir cantidad" onclick="changeQty(${index}, -1)">−</button>
+  <span class="qty-value">${item.quantity || 1}</span>
+  <button class="qty-btn" type="button" aria-label="Aumentar cantidad" onclick="changeQty(${index}, 1)">+</button>
+</div>
+
 
       <div class="cart-item-meta">
         <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
