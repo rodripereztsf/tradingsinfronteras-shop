@@ -510,6 +510,7 @@ document.addEventListener("click", (e) => {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
+runSplash();
   const yearEl = document.getElementById("year");
   if (yearEl) {
     yearEl.textContent = new Date().getFullYear();
@@ -521,3 +522,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initProducts();
 });
+function runSplash() {
+  const splash = document.getElementById("tsf-splash");
+  if (!splash) return;
+
+  // duración total del splash (ms)
+  const DURATION = 2300;
+
+  // si el usuario recarga rápido o navega, evitamos que quede pegado
+  setTimeout(() => {
+    splash.style.opacity = "0";
+    setTimeout(() => splash.remove(), 380);
+  }, DURATION);
+}
