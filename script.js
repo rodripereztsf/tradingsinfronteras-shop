@@ -562,4 +562,4 @@ function runSplash() {
       app.classList.remove("tsf-blur-off");
     }, 450);
   }, DURATION);
-}
+});
