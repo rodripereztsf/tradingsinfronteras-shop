@@ -873,3 +873,9 @@ a {
   opacity: 0.8;
   text-align: center;
 }
+.instant-access{
+  margin-top: 6px;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  text-align: center;
+}
