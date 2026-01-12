@@ -1,103 +1,111 @@
 // api/create-stripe-checkout.js
-const Stripe = require("stripe");
 
-// ─────────────────────────────────────────────
-// Helper CORS
-// ─────────────────────────────────────────────
+import Stripe from "stripe";
+
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   setCors(res);
 
-  if (req.method === "OPTIONS") {
-    res.statusCode = 200;
-    return res.end();
-  }
+  // Preflight CORS
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method !== "POST") {
-    res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Method not allowed" }));
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const stripeSecret =
-      process.env.STRIPE_SECRET_KEY ||
-      process.env.STRIPE_SECRET_TEST ||
-      process.env.STRIPE_SECRET;
-
-    if (!stripeSecret) {
-      throw new Error("Falta STRIPE_SECRET_KEY en variables de entorno.");
+    // 1) Env vars mínimas
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(500).json({
+        error: "Missing STRIPE_SECRET_KEY in Vercel env",
+      });
     }
 
-    const stripe = new Stripe(stripeSecret, { apiVersion: "2022-11-15" });
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    const {
-      items = [],
-      buyerName = "",
-      buyerEmail = "",
-      buyerWhatsApp = "",
-      successUrl,
-      cancelUrl,
-    } = req.body || {};
+    // 2) Body
+    const body = req.body || {};
+    const customer = body.customer || {};
+    const cart = body.cart || [];
+    const currencyRaw = body.currency || "usd";
+    const currency = String(currencyRaw).trim().toLowerCase();
 
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new Error("No hay items para cobrar.");
+    // 3) Validaciones básicas
+    if (!customer.name || !customer.email) {
+      return res.status(400).json({
+        error: "Missing customer data",
+        details: { name: !!customer.name, email: !!customer.email },
+      });
     }
 
-    if (!buyerEmail) {
-      throw new Error("Falta buyerEmail.");
+    if (!Array.isArray(cart) || cart.length === 0) {
+      return res.status(400).json({ error: "Empty cart" });
     }
 
-    // Line items para Stripe (USD, centavos)
-    const line_items = items.map((item) => ({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.name || "Producto TSF",
+    // 4) Line items (Stripe requiere unit_amount entero)
+    const line_items = cart.map((item, idx) => {
+      const name = String(item?.name || `Item ${idx + 1}`);
+      const qty = Number(item?.qty || 1);
+
+      const priceNum = Number(item?.price);
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        throw new Error(`Invalid price for "${name}". Got: ${item?.price}`);
+      }
+
+      const unit_amount = Math.round(priceNum * 100); // centavos
+
+      return {
+        quantity: Number.isFinite(qty) && qty > 0 ? qty : 1,
+        price_data: {
+          currency,
+          product_data: { name },
+          unit_amount,
         },
-        unit_amount: Number(item.price || 0), // centavos
-      },
-      quantity: Number(item.quantity || 1),
-    }));
-
-    // IMPORTANTE: metadata consistente para webhook (mails + kommo)
-    const metadata = {
-      buyer_email: buyerEmail,
-      buyer_name: buyerName || "",
-      buyer_whatsapp: buyerWhatsApp || "",
-      cart: JSON.stringify(items), // [{name,price,quantity,...}]
-    };
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items,
-      customer_email: buyerEmail || undefined,
-      metadata,
-      success_url:
-        successUrl ||
-        "https://tradingsinfronteras-shop.vercel.app/checkout-success-stripe.html",
-      cancel_url:
-        cancelUrl || "https://tradingsinfronteras-shop.vercel.app/cart.html",
+      };
     });
 
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ url: session.url }));
+    // 5) URLs completas para Stripe (sí o sí https://)
+    const baseUrl =
+      (process.env.PUBLIC_SITE_URL && process.env.PUBLIC_SITE_URL.trim()) ||
+      "https://rodripereztsf.github.io";
+
+    const successUrl = `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/cancel.html`;
+
+    // 6) Crear sesión
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_email: customer.email,
+      metadata: {
+        name: String(customer.name),
+        email: String(customer.email),
+        whatsapp: String(customer.whatsapp || ""),
+        currency,
+      },
+    });
+
+    // 7) Respuesta OK
+    return res.status(200).json({
+      url: session.url,
+      id: session.id,
+    });
   } catch (err) {
-    console.error("Error creando sesión de Stripe:", err);
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(
-      JSON.stringify({
-        error: "Error al crear la sesión de pago con Stripe.",
-        message: err.message,
-      })
-    );
+    // Importante: devolver mensaje legible para debug
+    console.error("Stripe checkout error:", err);
+
+    return res.status(500).json({
+      error: "Stripe checkout failed",
+      message: err?.message || String(err),
+      type: err?.type,
+      code: err?.code,
+    });
   }
-};
+}
