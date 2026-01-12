@@ -5,6 +5,50 @@
 let cart = [];
 let allProducts = [];
 
+// ===============================
+// TOAST (mensaje flotante)
+// ===============================
+
+function ensureToast() {
+  let toast = document.getElementById("tsf-toast");
+  if (toast) return toast;
+
+  toast = document.createElement("div");
+  toast.id = "tsf-toast";
+  toast.style.cssText = `
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.85);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.15);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    max-width: 92vw;
+    text-align: center;
+  `;
+  document.body.appendChild(toast);
+  return toast;
+}
+
+let toastTimer = null;
+function showToast(message) {
+  const toast = ensureToast();
+  toast.textContent = message;
+  toast.style.opacity = "1";
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.style.opacity = "0";
+  }, 1400);
+}
+
 // Formatear precio desde centavos
 function formatUsdFromCents(cents) {
   const n = Number(cents || 0) / 100;
@@ -63,6 +107,7 @@ function addToCart(name, priceCents) {
   saveCartToStorage();
   updateCartBadge();
   renderCartPage(); // si estás en cart.html, se actualiza la vista
+  showToast("✅ Producto agregado al carrito");
 }
 
 // Eliminar producto por índice
@@ -71,6 +116,26 @@ function removeFromCart(index) {
   if (index < 0 || index >= cart.length) return;
 
   cart.splice(index, 1);
+  saveCartToStorage();
+  updateCartBadge();
+  renderCartPage();
+}
+
+// Cambiar cantidad (+ / -)
+function changeQty(index, delta) {
+  if (!Array.isArray(cart)) return;
+  if (index < 0 || index >= cart.length) return;
+
+  const item = cart[index];
+  const current = Number(item.quantity || 1);
+  const next = current + Number(delta || 0);
+
+  if (next <= 0) {
+    cart.splice(index, 1);
+  } else {
+    item.quantity = next;
+  }
+
   saveCartToStorage();
   updateCartBadge();
   renderCartPage();
@@ -108,10 +173,14 @@ function renderCartPage() {
     div.innerHTML = `
       <div class="cart-item-info">
         <h3 class="cart-item-name">${item.name}</h3>
-        <p class="cart-item-qty">Cantidad: <span>${
-          item.quantity
-        }</span></p>
+
+        <div class="qty-controls">
+          <button class="qty-btn" type="button" onclick="changeQty(${index}, -1)">−</button>
+          <span class="qty-value">${item.quantity || 1}</span>
+          <button class="qty-btn" type="button" onclick="changeQty(${index}, 1)">+</button>
+        </div>
       </div>
+
       <div class="cart-item-meta">
         <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
         <button class="cart-item-remove" onclick="removeFromCart(${index})">
@@ -357,7 +426,6 @@ async function fetchJsonDebug(url, options) {
   }
 
   if (!res.ok) {
-    // esto te va a mostrar el motivo real del 500
     console.error("API error:", res.status, data);
     const msg =
       data?.message ||
@@ -371,7 +439,6 @@ async function fetchJsonDebug(url, options) {
 
 // currency: "usd" o "ars"
 async function payWithStripe(currency = "usd") {
-  // Nos aseguramos de tener el carrito actualizado desde localStorage
   loadCartFromStorage();
 
   if (!cart || cart.length === 0) {
@@ -390,7 +457,6 @@ async function payWithStripe(currency = "usd") {
 
   try {
     const payload = {
-      // NUEVO formato (recomendado)
       customer: {
         name: buyerName,
         email: buyerEmail,
@@ -398,7 +464,6 @@ async function payWithStripe(currency = "usd") {
       },
       cart: cart.map((item) => ({
         name: item.name,
-        // en tu carrito ya está en centavos
         price: Number(item.price),
         qty: Number(item.quantity || 1),
       })),
@@ -427,16 +492,13 @@ async function payWithStripe(currency = "usd") {
   }
 }
 
-// Si tu HTML tiene botones separados ARS/USD, conectalos así:
-// (si no existen, esto no rompe nada)
+// Conectar botones (si existen)
 document.addEventListener("click", (e) => {
   const t = e.target;
 
-  // Ejemplos de ids posibles. Ajustá si los tuyos se llaman distinto.
   if (t && t.id === "pay-usd") payWithStripe("usd");
   if (t && t.id === "pay-ars") payWithStripe("ars");
 
-  // Si seguís usando un solo botón "pay-button", paga en USD por defecto:
   if (t && t.id === "pay-button") payWithStripe("usd");
 });
 
@@ -445,17 +507,14 @@ document.addEventListener("click", (e) => {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Año en el footer
   const yearEl = document.getElementById("year");
   if (yearEl) {
     yearEl.textContent = new Date().getFullYear();
   }
 
-  // Cargar carrito y reflejar estado
   loadCartFromStorage();
   updateCartBadge();
-  renderCartPage(); // si estamos en cart.html
+  renderCartPage();
 
-  // Renderizar productos dinámicamente
   initProducts();
 });
