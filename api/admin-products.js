@@ -1,15 +1,6 @@
 // api/admin-products.js
-// CRUD de productos en Upstash Redis (REST API)
-// - GET    -> { products: [...] }
-// - POST   -> upsert (crear/editar)
-// - DELETE -> eliminar por id
-//
-// Requiere env vars en Vercel:
-// UPSTASH_REDIS_REST_URL
-// UPSTASH_REDIS_REST_TOKEN
-//
-// Opcional:
-// PRODUCTS_KEY (si no, usa tsf_shop_products_v1)
+// Next.js / Vercel Serverless (Node)
+// Guarda/lee productos desde Upstash Redis (REST API)
 
 export const config = {
   api: { bodyParser: true },
@@ -18,168 +9,139 @@ export const config = {
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-const PRODUCTS_KEY = (process.env.PRODUCTS_KEY || "tsf_shop_products_v1").trim();
+const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim();
+const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim();
 
-function safeJsonParse(str, fallback) {
-  try {
-    return JSON.parse(str);
-  } catch {
-    return fallback;
-  }
-}
+// Clave única en Redis para tu catálogo
+const PRODUCTS_KEY = "tsf_shop_products_v1";
 
-async function redisFetch(command, args = []) {
-  const base = (process.env.UPSTASH_REDIS_REST_URL || "").trim();
-  const token = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim();
-
-  if (!base || !token) {
-    throw new Error(
-      "Faltan UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN en Vercel env."
-    );
+async function upstash(cmd, args = []) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    throw new Error("Faltan env UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN");
   }
 
-  const url = `${base}/${command}/${args.map(encodeURIComponent).join("/")}`;
-  const r = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetch(`${UPSTASH_URL}/${cmd}/${args.map(encodeURIComponent).join("/")}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
   });
 
-  const text = await r.text();
-  const data = safeJsonParse(text, { raw: text });
-
-  if (!r.ok) {
-    const msg = data?.error || data?.message || `Upstash error (${r.status})`;
-    throw new Error(msg);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error || `Upstash error ${res.status}`);
   }
-
   return data;
 }
 
-async function redisGetJson(key) {
-  const data = await redisFetch("get", [key]);
-  // Upstash REST: { result: "string" } o { result: null }
-  const raw = data?.result ?? null;
-  if (!raw) return [];
-  const parsed = safeJsonParse(raw, []);
-  return Array.isArray(parsed) ? parsed : [];
+async function readProducts() {
+  const r = await upstash("get", [PRODUCTS_KEY]);
+  // Upstash devuelve { result: "string" } o { result: null }
+  if (!r || r.result == null) return [];
+  try {
+    const parsed = JSON.parse(r.result);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
-async function redisSetJson(key, value) {
-  const json = JSON.stringify(value);
-  await redisFetch("set", [key, json]);
+async function writeProducts(products) {
+  const payload = JSON.stringify(products || []);
+  await upstash("set", [PRODUCTS_KEY, payload]);
 }
 
-function nowIso() {
-  return new Date().toISOString();
+function safeString(x) {
+  return String(x == null ? "" : x).trim();
 }
 
-function slugify(s) {
-  return String(s || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+function toBool(x, defaultValue = false) {
+  if (typeof x === "boolean") return x;
+  if (typeof x === "string") return x.toLowerCase() === "true";
+  return defaultValue;
 }
 
-function makeIdFromName(name) {
-  const base = slugify(name) || "producto";
-  const rand = Math.random().toString(16).slice(2, 8);
-  return `${base}-${Date.now().toString(16)}${rand}`;
-}
+function normalizeProduct(input) {
+  // Estructura estándar que usa tu tienda + webhook
+  const id = safeString(input.id) || `p_${Math.random().toString(36).slice(2, 10)}`;
 
-function normalizeProduct(p) {
-  const price = Number(p?.price_cents ?? 0);
-  const out = {
-    id: String(p?.id || "").trim() || makeIdFromName(p?.name),
-    name: String(p?.name || "").trim(),
-    type: String(p?.type || "other").trim(),
-    short_description: String(p?.short_description || "").trim(),
-    price_cents: Number.isFinite(price) ? Math.max(0, Math.round(price)) : 0,
-    currency: String(p?.currency || "USD").trim(),
-    image_url: String(p?.image_url || "").trim(),
+  const price_cents = Number.isFinite(Number(input.price_cents))
+    ? Math.max(0, Math.round(Number(input.price_cents)))
+    : 0;
 
-    is_active: Boolean(p?.is_active ?? true),
-    is_featured: p?.is_featured === false ? false : true,
+  return {
+    id,
+    name: safeString(input.name),
+    type: safeString(input.type) || "other",
+    short_description: safeString(input.short_description),
+    price_cents,
+    currency: safeString(input.currency || "USD") || "USD",
+    image_url: safeString(input.image_url),
+    is_active: toBool(input.is_active, true),
+    is_featured: toBool(input.is_featured, true),
+    delivery_type: safeString(input.delivery_type || (safeString(input.delivery_value) ? "drive_link" : "none")),
+    delivery_value: safeString(input.delivery_value),
+    email_subject: safeString(input.email_subject),
+    email_body: safeString(input.email_body),
+    pdf_url: safeString(input.pdf_url),
 
-    delivery_type: String(p?.delivery_type || (p?.delivery_value ? "drive_link" : "none")).trim(),
-    delivery_value: String(p?.delivery_value || "").trim(),
-
-    email_subject: String(p?.email_subject || "").trim(),
-    email_body: String(p?.email_body || "").trim(),
-    pdf_url: String(p?.pdf_url || "").trim(),
-
-    // NUEVO (para botón WhatsApp por producto)
-    walink_url: String(p?.walink_url || "").trim(),
-
-    updated_at: nowIso(),
-    created_at: String(p?.created_at || "").trim() || nowIso(),
+    // ✅ NUEVO: walink por producto
+    walink: safeString(input.walink),
   };
-
-  // mínimos obligatorios
-  if (!out.name) throw new Error("Nombre es obligatorio");
-  if (!out.price_cents) throw new Error("Precio (USD) es obligatorio");
-
-  return out;
 }
 
 export default async function handler(req, res) {
   setCors(res);
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
+    // GET -> listar productos (para admin)
     if (req.method === "GET") {
-      const products = await redisGetJson(PRODUCTS_KEY);
+      const products = await readProducts();
       return res.status(200).json({ products });
     }
 
+    // POST -> crear/editar
     if (req.method === "POST") {
-      const incoming = req.body || {};
-      const products = await redisGetJson(PRODUCTS_KEY);
+      const body = req.body || {};
 
-      const normalized = normalizeProduct(incoming);
+      const incoming = normalizeProduct(body);
 
-      const idx = products.findIndex((x) => String(x.id) === String(normalized.id));
-      if (idx >= 0) {
-        // conserva created_at
-        normalized.created_at = products[idx]?.created_at || normalized.created_at;
-        products[idx] = normalized;
-      } else {
-        products.push(normalized);
+      if (!incoming.name) return res.status(400).json({ error: "Nombre obligatorio" });
+      if (!incoming.price_cents || incoming.price_cents <= 0) {
+        return res.status(400).json({ error: "Precio inválido" });
       }
 
-      await redisSetJson(PRODUCTS_KEY, products);
-      return res.status(200).json({ ok: true, product: normalized, products });
+      const products = await readProducts();
+
+      const idx = products.findIndex((p) => p.id === incoming.id);
+      if (idx >= 0) {
+        products[idx] = { ...products[idx], ...incoming };
+      } else {
+        products.push(incoming);
+      }
+
+      await writeProducts(products);
+      return res.status(200).json({ ok: true, product: incoming, products });
     }
 
+    // DELETE -> eliminar por id
     if (req.method === "DELETE") {
       const { id } = req.body || {};
-      if (!id) return res.status(400).json({ error: "Falta id" });
+      const productId = safeString(id);
+      if (!productId) return res.status(400).json({ error: "Falta id" });
 
-      const products = await redisGetJson(PRODUCTS_KEY);
-      const next = products.filter((p) => String(p.id) !== String(id));
+      const products = await readProducts();
+      const next = products.filter((p) => p.id !== productId);
 
-      await redisSetJson(PRODUCTS_KEY, next);
+      await writeProducts(next);
       return res.status(200).json({ ok: true, products: next });
     }
 
     return res.status(405).json({ error: "Method Not Allowed" });
   } catch (err) {
     console.error("admin-products error:", err);
-    return res.status(500).json({
-      error: err?.message || "Internal Server Error",
-      hint:
-        "Revisá env vars UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN en Vercel.",
-      key: PRODUCTS_KEY,
-    });
+    return res.status(500).json({ error: err?.message || "Internal error" });
   }
 }
