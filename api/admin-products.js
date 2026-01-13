@@ -1,184 +1,215 @@
 // api/admin-products.js
 //
-// CRUD de productos TSF SHOP sobre Upstash Redis
-// Incluye flag is_featured para "Productos destacados"
+// Objetivo: devolver { products: [...] } leyendo desde Upstash Redis REST
+// Soporta 2 esquemas comunes:
+// 1) Un key "products" que contiene un JSON array
+// 2) Un hash "products:<id>" por producto (y opcionalmente un set/list de ids)
+//
+// NOTA: No toca diseño. Solo estabiliza la API.
 
-const { Redis } = require("@upstash/redis");
-
-// ---------------------------
-// Helpers
-// ---------------------------
+function json(res, status, data) {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.end(JSON.stringify(data));
+}
 
 function setCors(res) {
+  // Si querés restringir, podés cambiar a tu dominio.
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
-let redisClient = null;
-async function getRedis() {
-  if (!redisClient) {
-    redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+function envOk() {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  return Boolean(url && token);
+}
+
+async function upstash(cmdParts) {
+  const base = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  // cmdParts ejemplo: ["get","products"] o ["keys","products:*"]
+  const path = cmdParts.map(encodeURIComponent).join("/");
+  const url = `${base}/${path}`;
+
+  const r = await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const text = await r.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!r.ok) {
+    const err = new Error(`Upstash HTTP ${r.status}`);
+    err.details = data;
+    throw err;
+  }
+
+  if (data && data.error) {
+    const err = new Error(`Upstash error: ${data.error}`);
+    err.details = data;
+    throw err;
+  }
+
+  return data;
+}
+
+function safeParseJson(val) {
+  if (val == null) return null;
+  if (typeof val !== "string") return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeProduct(p) {
+  if (!p || typeof p !== "object") return null;
+
+  // Normalización mínima sin romper tu estructura actual
+  const out = { ...p };
+
+  // Asegurar id
+  if (!out.id) out.id = out.slug || out.sku || out.name;
+
+  // Normalizar price si viene como string
+  if (typeof out.price === "string") {
+    const n = Number(out.price);
+    if (!Number.isNaN(n)) out.price = n;
+  }
+
+  // Normalizar fields típicos para que el admin no “rompa”
+  if (out.active == null && out.isActive != null) out.active = out.isActive;
+  if (out.whatsapp == null && out.waLink != null) out.whatsapp = out.waLink;
+
+  return out;
+}
+
+async function readFromKeyProductsJsonArray() {
+  // GET products  -> value string JSON array
+  const got = await upstash(["get", "products"]);
+  const raw = got ? got.result : null;
+  const parsed = safeParseJson(raw);
+
+  if (Array.isArray(parsed)) {
+    return parsed.map(normalizeProduct).filter(Boolean);
+  }
+  return null; // no está en este formato
+}
+
+async function readFromHashesProductsStar() {
+  // KEYS products:*  -> ["products:abc", "products:def"]
+  const keysRes = await upstash(["keys", "products:*"]);
+  const keys = keysRes && keysRes.result;
+
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return [];
+  }
+
+  // Leer cada hash
+  const products = [];
+  for (const key of keys) {
+    // HGETALL products:<id> -> array [field, value, field, value] o object (depende)
+    let h;
+    try {
+      h = await upstash(["hgetall", key]);
+    } catch (e) {
+      // Si un key está corrupto no tiramos todo
+      console.error("[admin-products] hgetall failed for", key, e.details || e);
+      continue;
+    }
+
+    const result = h ? h.result : null;
+    let obj = null;
+
+    if (result && typeof result === "object" && !Array.isArray(result)) {
+      // ya es object
+      obj = result;
+    } else if (Array.isArray(result)) {
+      // array plano [k,v,k,v]
+      obj = {};
+      for (let i = 0; i < result.length; i += 2) {
+        obj[result[i]] = result[i + 1];
+      }
+    }
+
+    if (!obj) continue;
+
+    // Algunos campos se guardan JSON-stringificados (ej: instructivo, pdfMeta, etc.)
+    for (const k of Object.keys(obj)) {
+      const maybe = safeParseJson(obj[k]);
+      if (maybe !== null && (typeof obj[k] === "string")) obj[k] = maybe;
+    }
+
+    // id desde key si falta
+    if (!obj.id && typeof key === "string") {
+      const parts = key.split(":");
+      obj.id = parts.length > 1 ? parts.slice(1).join(":") : key;
+    }
+
+    const norm = normalizeProduct(obj);
+    if (norm) products.push(norm);
+  }
+
+  return products;
+}
+
+export default async function handler(req, res) {
+  try {
+    setCors(res);
+
+    if (req.method === "OPTIONS") {
+      res.statusCode = 204;
+      return res.end();
+    }
+
+    if (req.method !== "GET") {
+      return json(res, 405, { error: "Method not allowed" });
+    }
+
+    if (!envOk()) {
+      console.error("[admin-products] Missing Upstash env vars");
+      return json(res, 500, {
+        error: "Missing UPSTASH env vars",
+        missing: {
+          UPSTASH_REDIS_REST_URL: !process.env.UPSTASH_REDIS_REST_URL,
+          UPSTASH_REDIS_REST_TOKEN: !process.env.UPSTASH_REDIS_REST_TOKEN,
+        },
+      });
+    }
+
+    // 1) Intento formato key "products" JSON array
+    let products = await readFromKeyProductsJsonArray();
+
+    // 2) Si no existe, fallback a hashes products:*
+    if (products === null) {
+      products = await readFromHashesProductsStar();
+    }
+
+    // Orden estable si hay name o createdAt
+    products.sort((a, b) => {
+      const an = (a.name || "").toString().toLowerCase();
+      const bn = (b.name || "").toString().toLowerCase();
+      if (an && bn) return an.localeCompare(bn);
+      return 0;
+    });
+
+    return json(res, 200, { products });
+  } catch (err) {
+    console.error("[admin-products] CRASH", err.details || err);
+    return json(res, 500, {
+      error: "FUNCTION_INVOCATION_FAILED",
+      message: err && err.message ? err.message : "Unknown error",
+      details: err && err.details ? err.details : undefined,
     });
   }
-  return redisClient;
 }
-
-function generateIdFromName(name = "") {
-  return (
-    name
-      .toString()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") +
-    "-" +
-    Date.now().toString(36)
-  );
-}
-
-// Parsear body seguro
-async function parseBody(req) {
-  if (!req.body) return {};
-  if (typeof req.body === "string") {
-    try {
-      return JSON.parse(req.body);
-    } catch {
-      return {};
-    }
-  }
-  return req.body;
-}
-
-// ---------------------------
-// Handler principal
-// ---------------------------
-
-module.exports = async (req, res) => {
-  setCors(res);
-
-  if (req.method === "OPTIONS") {
-    res.statusCode = 200;
-    return res.end();
-  }
-
-  try {
-    const redis = await getRedis();
-    let products = await redis.get("tsf:products");
-    if (!Array.isArray(products)) products = [];
-
-    // -------- GET: listado completo para el panel admin --------
-    if (req.method === "GET") {
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ products }));
-    }
-
-    // -------- POST: crear / actualizar producto --------
-    if (req.method === "POST") {
-      const payload = await parseBody(req);
-
-      const product = {
-  id,
-  name,
-  type,
-  short_description,
-  price_cents,
-  currency,
-  image_url,
-  is_active,
-  is_featured,
-  delivery_type,
-  delivery_value,
-  email_body,
-  pdf_url,
-  whatsapp_url: whatsapp_url || "", // <-- NUEVO
-};
-
-      } = payload || {};
-
-      if (!name || !price_cents) {
-        res.statusCode = 400;
-        return res.end(
-          JSON.stringify({ error: "Faltan campos: name o price_cents" })
-        );
-      }
-
-      // Normalizaciones
-      const normalizedIsActive = is_active !== false;
-      const normalizedIsFeatured =
-        is_featured === true ||
-        is_featured === "true" ||
-        is_featured === 1 ||
-        is_featured === "1";
-
-      const productId = id || generateIdFromName(name);
-
-      const normalizedProduct = {
-        id: productId,
-        name,
-        type: type || "other",
-        short_description: short_description || "",
-        price_cents: Number(price_cents),
-        currency: currency || "USD",
-        image_url: image_url || "",
-        is_active: normalizedIsActive,
-        delivery_type: delivery_type || "none",
-        delivery_value: delivery_value || "",
-        email_subject:
-          email_subject ||
-          `Tu compra en Trading Sin Fronteras – ${name}`,
-        email_body: email_body || "",
-        pdf_url: pdf_url || "",
-        // 👇 Flag para "Productos destacados"
-        // Los viejos (sin campo) se consideran destacados hasta que los edites.
-        is_featured:
-          is_featured === undefined ? true : normalizedIsFeatured,
-      };
-
-      const index = products.findIndex((p) => p.id === productId);
-      if (index >= 0) {
-        products[index] = normalizedProduct;
-      } else {
-        products.push(normalizedProduct);
-      }
-
-      await redis.set("tsf:products", products);
-
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ product: normalizedProduct }));
-    }
-
-    // -------- DELETE: borrar producto --------
-    if (req.method === "DELETE") {
-      const body = await parseBody(req);
-      const id = body.id || (req.query ? req.query.id : null);
-
-      if (!id) {
-        res.statusCode = 400;
-        return res.end(JSON.stringify({ error: "Falta id para borrar" }));
-      }
-
-      const newProducts = products.filter((p) => p.id !== id);
-      await redis.set("tsf:products", newProducts);
-
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ ok: true }));
-    }
-
-    // -------- Método no permitido --------
-    res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Method not allowed" }));
-  } catch (err) {
-    console.error("Error en /api/admin-products:", err);
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Internal server error" }));
-  }
-};
