@@ -81,21 +81,23 @@ module.exports = async (req, res) => {
     if (req.method === "POST") {
       const payload = await parseBody(req);
 
-      const {
-        id,
-        name,
-        type,
-        short_description,
-        price_cents,
-        currency,
-        image_url,
-        is_active,
-        delivery_type,
-        delivery_value,
-        email_subject,
-        email_body,
-        pdf_url,
-        is_featured, // true/false/"true"/"false"/1/"1"
+      const product = {
+  id,
+  name,
+  type,
+  short_description,
+  price_cents,
+  currency,
+  image_url,
+  is_active,
+  is_featured,
+  delivery_type,
+  delivery_value,
+  email_body,
+  pdf_url,
+  whatsapp_url: whatsapp_url || "", // <-- NUEVO
+};
+
       } = payload || {};
 
       if (!name || !price_cents) {
