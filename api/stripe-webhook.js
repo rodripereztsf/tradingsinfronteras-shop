@@ -2,16 +2,20 @@
 import Stripe from "stripe";
 import nodemailer from "nodemailer";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 export const config = {
   api: { bodyParser: false },
 };
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// ===== CORS =====
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Stripe-Signature");
 }
 
+// ===== SMTP =====
 function buildTransporter() {
   return nodemailer.createTransport({
     service: "gmail",
@@ -22,6 +26,7 @@ function buildTransporter() {
   });
 }
 
+// ===== Utils =====
 function money(amount, currency) {
   const n = Number(amount || 0) / 100;
   return `${String(currency || "").toUpperCase()} ${n.toFixed(2)}`;
@@ -29,11 +34,11 @@ function money(amount, currency) {
 
 function escapeHtml(str) {
   return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function normalizeName(s) {
@@ -52,42 +57,48 @@ async function readRawBody(req) {
 }
 
 async function getLineItems(sessionId) {
-  const li = await stripe.checkout.sessions.listLineItems(sessionId, {
-    limit: 100,
-  });
+  const li = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 100 });
   return li?.data || [];
 }
 
+// ====== Upstash (leer productos directo, más estable) ======
+const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim();
+const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim();
+const PRODUCTS_KEY = "tsf_shop_products_v1";
+
+async function upstash(cmd, args = []) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    throw new Error("Faltan env UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN");
+  }
+
+  const res = await fetch(`${UPSTASH_URL}/${cmd}/${args.map(encodeURIComponent).join("/")}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `Upstash error ${res.status}`);
+  return data;
+}
+
 async function fetchAdminProducts() {
-  const base =
-    (process.env.API_BASE_URL && process.env.API_BASE_URL.trim()) ||
-    "https://tradingsinfronteras-shop.vercel.app";
-
-  const url = `${base}/api/admin-products`;
-
-  const res = await fetch(url);
-  const text = await res.text();
-  const data = (() => {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return { raw: text };
-    }
-  })();
-
-  if (!res.ok) throw new Error(data?.error || "No se pudo leer /api/admin-products");
-  if (!data || !Array.isArray(data.products)) throw new Error("Respuesta inválida de /api/admin-products");
-
-  return data.products;
+  const r = await upstash("get", [PRODUCTS_KEY]);
+  if (!r || r.result == null) return [];
+  try {
+    const parsed = JSON.parse(r.result);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 function matchProductFromLineItem(adminProducts, lineItem) {
   const liName = normalizeName(lineItem?.description || "");
   const liQty = Number(lineItem?.quantity || 1);
+
   const liTotal = Number(lineItem?.amount_total ?? lineItem?.amount_subtotal ?? 0);
   const liUnit = liQty > 0 ? Math.round(liTotal / liQty) : liTotal;
 
-  // 1) Match fuerte: nombre + price_cents exacto
+  // 1) Match fuerte: nombre + precio
   let hit = adminProducts.find((p) => {
     const pName = normalizeName(p?.name || "");
     const pPrice = Number(p?.price_cents ?? 0);
@@ -108,25 +119,7 @@ function matchProductFromLineItem(adminProducts, lineItem) {
   return hit || null;
 }
 
-/* =========================
-   EMAIL HTMLs
-========================= */
-
-function pillButton(label, href, variant = "primary") {
-  const styles =
-    variant === "whatsapp"
-      ? "background:#00cfff;color:#001018;border:1px solid rgba(0,207,255,.35);"
-      : "background:#00cfff;color:#001018;border:1px solid rgba(0,207,255,.35);";
-
-  return `
-    <a href="${escapeHtml(href)}"
-       style="display:inline-block; padding:12px 18px; border-radius:999px; text-decoration:none;
-              font-weight:800; letter-spacing:.02em; ${styles}">
-      ${escapeHtml(label)}
-    </a>
-  `;
-}
-
+// ===== EMAIL TEMPLATES =====
 function emailAdminHtml({ title, eventType, statusLabel, name, email, whatsapp, totalLabel, rowsHtml, extraLines }) {
   const extra = (extraLines || [])
     .map((l) => `<p style="margin:6px 0; opacity:.9;">${escapeHtml(l)}</p>`)
@@ -165,15 +158,26 @@ function emailAdminHtml({ title, eventType, statusLabel, name, email, whatsapp, 
   `;
 }
 
-function emailCustomerHtml({ buyerName, deliveries, fallbackWalink }) {
+function buttonHtml(label, href) {
+  if (!href) return "";
+  const url = escapeHtml(href);
+  return `
+    <a href="${url}"
+       style="display:inline-block; margin-top:12px; padding:12px 16px; border-radius:999px;
+              background:#00cfff; color:#001018; text-decoration:none; font-weight:700;">
+      ${escapeHtml(label)}
+    </a>
+  `;
+}
+
+function emailCustomerHtml({ buyerName, deliveries }) {
   const blocks = deliveries
     .map((d) => {
       const access = d.accessUrl
-        ? `<div style="margin-top:12px;">${pillButton(
-            d.accessLabel || "Acceder",
-            d.accessUrl
-          )}</div>`
+        ? `<div style="margin-top:10px;">${buttonHtml(d.accessLabel || "ACCESO", d.accessUrl)}</div>`
         : `<p style="margin:10px 0 0 0; opacity:.85;"><b>Acceso:</b> Te lo enviamos/activamos manualmente.</p>`;
+
+      const whatsappBtn = d.walink ? `<div style="margin-top:10px;">${buttonHtml("WHATSAPP", d.walink)}</div>` : "";
 
       const pdf = d.pdf_url
         ? `<p style="margin:10px 0 0 0;"><b>PDF:</b> <a href="${escapeHtml(d.pdf_url)}" style="color:#00cfff;">Descargar instructivo</a></p>`
@@ -183,11 +187,6 @@ function emailCustomerHtml({ buyerName, deliveries, fallbackWalink }) {
         ? `<div style="margin-top:12px; padding:12px; border-radius:12px; border:1px solid #222; background:#0f0f0f;">
              <div style="opacity:.95;">${d.email_body}</div>
            </div>`
-        : "";
-
-      const walink = (d.walink_url || "").trim() || (fallbackWalink || "").trim();
-      const whatsappBtn = walink
-        ? `<div style="margin-top:12px;">${pillButton("WHATSAPP", walink, "whatsapp")}</div>`
         : "";
 
       return `
@@ -211,22 +210,17 @@ function emailCustomerHtml({ buyerName, deliveries, fallbackWalink }) {
 
     ${blocks}
 
-    <p style="margin-top:18px; opacity:.75;">
-      Si no ves el contenido al instante, revisá Spam/Promociones o escribinos por WhatsApp.
-    </p>
-
     <p style="margin-top:20px; opacity:.65;">© ${new Date().getFullYear()} TRADING SIN FRONTERAS SHOP</p>
   </div>
   `;
 }
 
-/* =========================
-   SENDERS
-========================= */
-
+// ===== SENDERS =====
 async function sendAdminEmail({ subject, html }) {
   const transporter = buildTransporter();
-  const to = process.env.ADMIN_EMAIL || process.env.SMTP_EMAIL;
+  const to = (process.env.ADMIN_EMAIL || process.env.SMTP_EMAIL || "").trim();
+
+  if (!to) throw new Error("Falta ADMIN_EMAIL o SMTP_EMAIL");
 
   await transporter.sendMail({
     from: `TSF SHOP <${process.env.SMTP_EMAIL}>`,
@@ -238,6 +232,7 @@ async function sendAdminEmail({ subject, html }) {
 
 async function sendCustomerEmail({ to, subject, html }) {
   const transporter = buildTransporter();
+
   const bcc = (process.env.CUSTOMER_EMAIL_BCC || "").trim() || undefined;
 
   await transporter.sendMail({
@@ -249,13 +244,10 @@ async function sendCustomerEmail({ to, subject, html }) {
   });
 }
 
-/* =========================
-   MAIN HANDLER
-========================= */
-
+// ===== MAIN HANDLER =====
 export default async function handler(req, res) {
   setCors(res);
-
+  if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
   const sig = req.headers["stripe-signature"];
@@ -263,25 +255,21 @@ export default async function handler(req, res) {
 
   try {
     const rawBody = await readRawBody(req);
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Webhook signature verification failed:", err?.message || err);
-    return res
-      .status(400)
-      .send(`Webhook Error: ${err?.message || "Invalid signature"}`);
+    return res.status(400).send(`Webhook Error: ${err?.message || "Invalid signature"}`);
   }
 
   try {
-    // 1) COMPRA EXITOSA
+    // ✅ COMPRA OK
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
       const buyerName =
-        session?.metadata?.name || session?.customer_details?.name || "Cliente";
+        session?.metadata?.name ||
+        session?.customer_details?.name ||
+        "Cliente";
 
       const buyerEmail =
         session?.metadata?.email ||
@@ -296,7 +284,7 @@ export default async function handler(req, res) {
 
       const currency = session?.currency || session?.metadata?.currency || "usd";
 
-      // ADMIN MAIL
+      // Line items
       const lineItems = await getLineItems(session.id);
 
       let rowsHtml = "";
@@ -315,9 +303,9 @@ export default async function handler(req, res) {
 
             return `
               <tr>
-                <td style="padding:10px; border-bottom:1px solid #222;">${name}</td>
-                <td style="padding:10px; text-align:center; border-bottom:1px solid #222;">${qty}</td>
-                <td style="padding:10px; text-align:right; border-bottom:1px solid #222;">${money(amount, it.currency || currency)}</td>
+                <td>${name}</td>
+                <td style="text-align:center;">${qty}</td>
+                <td style="text-align:right;">${money(amount, it.currency || currency)}</td>
               </tr>
             `;
           })
@@ -325,12 +313,11 @@ export default async function handler(req, res) {
       }
 
       const totalCents =
-        Number(session?.amount_total ?? 0) > 0
-          ? Number(session.amount_total)
-          : totalFromItemsCents;
+        Number(session?.amount_total ?? 0) > 0 ? Number(session.amount_total) : totalFromItemsCents;
 
       const totalLabel = money(totalCents, currency);
 
+      // Admin email
       await sendAdminEmail({
         subject: `✅ Compra confirmada - ${totalLabel}`,
         html: emailAdminHtml({
@@ -346,24 +333,13 @@ export default async function handler(req, res) {
         }),
       });
 
-      // CUSTOMER MAIL (entrega)
+      // Customer email (entrega)
       if (!buyerEmail) {
         console.warn("No buyerEmail => no se envía mail de entrega.");
         return res.status(200).json({ received: true, customer_email_sent: false });
       }
 
-      let adminProducts = [];
-      try {
-        adminProducts = await fetchAdminProducts();
-      } catch (e) {
-        console.error("No se pudieron leer productos del admin:", e?.message || e);
-        // Respondemos OK a Stripe, pero queda logueado
-        return res.status(200).json({
-          received: true,
-          customer_email_sent: false,
-          reason: "cannot_fetch_products",
-        });
-      }
+      const adminProducts = await fetchAdminProducts();
 
       const deliveries = lineItems.map((li) => {
         const matched = matchProductFromLineItem(adminProducts, li);
@@ -371,20 +347,19 @@ export default async function handler(req, res) {
         if (!matched) {
           return {
             name: li.description || "Producto",
-            accessLabel: "Acceso",
+            accessLabel: "ACCESO",
             accessUrl: "",
-            email_body:
-              `<p>Estamos preparando tu acceso. Si no lo recibís en breve, respondé este mail.</p>`,
+            walink: "",
+            email_body: `<p>Estamos preparando tu acceso. Si no lo recibís en breve, respondé este mail.</p>`,
             pdf_url: "",
-            walink_url: "",
           };
         }
 
-        const accessUrl = (matched.delivery_value || "").trim();
+        const accessUrl = String(matched.delivery_value || "").trim();
         const accessLabel =
           accessUrl && accessUrl.includes("skool.com")
-            ? "Entrar al aula (Skool)"
-            : "Abrir acceso";
+            ? "ACCESO AL AULA"
+            : "ACCESO";
 
         const email_body = matched.email_body
           ? matched.email_body
@@ -394,27 +369,22 @@ export default async function handler(req, res) {
           name: matched.name || li.description || "Producto",
           accessLabel,
           accessUrl,
+          walink: String(matched.walink || "").trim(), // ✅ WALINK por producto
           email_body,
-          pdf_url: (matched.pdf_url || "").trim(),
-          walink_url: (matched.walink_url || "").trim(),
+          pdf_url: String(matched.pdf_url || "").trim(),
         };
       });
 
       await sendCustomerEmail({
         to: buyerEmail,
         subject: `🎁 Acceso a tu compra – TSF SHOP`,
-        html: emailCustomerHtml({
-          buyerName,
-          deliveries,
-          // Fallback global si un producto no trae walink_url:
-          fallbackWalink: (process.env.SUPPORT_WALINK || "").trim(),
-        }),
+        html: emailCustomerHtml({ buyerName, deliveries }),
       });
 
       return res.status(200).json({ received: true, customer_email_sent: true });
     }
 
-    // otros eventos: OK
+    // Otros eventos: OK
     return res.status(200).json({ received: true });
   } catch (err) {
     console.error("Webhook handler error:", err);
