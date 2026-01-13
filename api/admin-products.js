@@ -1,202 +1,184 @@
-// api/admin-products.js (Vercel Serverless - CommonJS)
-// Devuelve { products: [...], meta: {...} } leyendo Upstash.
-// Importante: NO usa export default (para evitar crash si no es Next.js).
+// api/admin-products.js
+//
+// CRUD de productos TSF SHOP sobre Upstash Redis
+// Incluye flag is_featured para "Productos destacados"
+
+const { Redis } = require("@upstash/redis");
+
+// ---------------------------
+// Helpers
+// ---------------------------
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-function sendJson(res, status, obj) {
-  res.statusCode = status;
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
-  res.end(JSON.stringify(obj));
-}
-
-function getDebugFlag(req) {
-  try {
-    const u = new URL(req.url, "http://localhost");
-    return u.searchParams.get("debug") === "1" || u.searchParams.get("debug") === "true";
-  } catch {
-    return false;
+let redisClient = null;
+async function getRedis() {
+  if (!redisClient) {
+    redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
   }
+  return redisClient;
 }
 
-function envStatus() {
-  return {
-    UPSTASH_REDIS_REST_URL: Boolean(process.env.UPSTASH_REDIS_REST_URL),
-    UPSTASH_REDIS_REST_TOKEN: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
-  };
+function generateIdFromName(name = "") {
+  return (
+    name
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") +
+    "-" +
+    Date.now().toString(36)
+  );
 }
 
-async function upstash(cmdParts) {
-  const base = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  const path = cmdParts.map(encodeURIComponent).join("/");
-  const url = `${base}/${path}`;
-
-  const r = await fetch(url, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  const text = await r.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-  if (!r.ok) {
-    const err = new Error(`Upstash HTTP ${r.status}`);
-    err.details = data;
-    throw err;
-  }
-  if (data && data.error) {
-    const err = new Error(`Upstash error: ${data.error}`);
-    err.details = data;
-    throw err;
-  }
-  return data;
-}
-
-function safeParseJson(val) {
-  if (val == null) return null;
-  if (typeof val !== "string") return val;
-  try { return JSON.parse(val); } catch { return null; }
-}
-
-function normalizeProduct(p) {
-  if (!p || typeof p !== "object") return null;
-  const out = { ...p };
-
-  if (!out.id) out.id = out.slug || out.sku || out.name;
-
-  for (const k of Object.keys(out)) {
-    if (typeof out[k] === "string") {
-      const parsed = safeParseJson(out[k]);
-      if (parsed !== null) out[k] = parsed;
-    }
-  }
-
-  if (typeof out.price === "string") {
-    const n = Number(out.price);
-    if (!Number.isNaN(n)) out.price = n;
-  }
-
-  return out;
-}
-
-async function tryGetJsonArrayKey(key) {
-  const got = await upstash(["get", key]);
-  const parsed = safeParseJson(got ? got.result : null);
-  if (Array.isArray(parsed)) return parsed.map(normalizeProduct).filter(Boolean);
-  return null;
-}
-
-async function tryHashes(pattern) {
-  const keysRes = await upstash(["keys", pattern]);
-  const keys = keysRes ? keysRes.result : null;
-  if (!Array.isArray(keys) || keys.length === 0) return null;
-
-  const products = [];
-  for (const key of keys.slice(0, 400)) {
-    let h;
+// Parsear body seguro
+async function parseBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === "string") {
     try {
-      h = await upstash(["hgetall", key]);
-    } catch (e) {
-      console.error("[admin-products] hgetall fail", key, e.details || e);
-      continue;
+      return JSON.parse(req.body);
+    } catch {
+      return {};
     }
-
-    const result = h ? h.result : null;
-    let obj = null;
-
-    if (result && typeof result === "object" && !Array.isArray(result)) {
-      obj = result;
-    } else if (Array.isArray(result)) {
-      obj = {};
-      for (let i = 0; i < result.length; i += 2) obj[result[i]] = result[i + 1];
-    }
-
-    if (!obj) continue;
-
-    if (!obj.id) {
-      const parts = String(key).split(":");
-      obj.id = parts.length > 1 ? parts.slice(1).join(":") : key;
-    }
-
-    const norm = normalizeProduct(obj);
-    if (norm) products.push(norm);
   }
-
-  return products.length ? products : null;
+  return req.body;
 }
+
+// ---------------------------
+// Handler principal
+// ---------------------------
 
 module.exports = async (req, res) => {
   setCors(res);
 
   if (req.method === "OPTIONS") {
-    res.statusCode = 204;
+    res.statusCode = 200;
     return res.end();
   }
 
-  if (req.method !== "GET") {
-    return sendJson(res, 405, { error: "Method not allowed" });
-  }
-
-  const debug = getDebugFlag(req);
-  const env = envStatus();
-
   try {
-    if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
-      // Devuelvo 200 para que el panel no explote y puedas ver el motivo
-      return sendJson(res, 200, {
-        products: [],
-        meta: { source: "none", error: true, message: "Missing Upstash env vars", env },
-      });
+    const redis = await getRedis();
+    let products = await redis.get("tsf:products");
+    if (!Array.isArray(products)) products = [];
+
+    // -------- GET: listado completo para el panel admin --------
+    if (req.method === "GET") {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ products }));
     }
 
-    if (debug) {
-      const patterns = ["*products*", "products:*", "product:*", "shop:*", "store:*", "tsf*"];
-      const sample = {};
+    // -------- POST: crear / actualizar producto --------
+    if (req.method === "POST") {
+      const payload = await parseBody(req);
 
-      for (const pat of patterns) {
-        try {
-          const r = await upstash(["keys", pat]);
-          sample[pat] = Array.isArray(r.result) ? r.result.slice(0, 50) : [];
-        } catch (e) {
-          sample[pat] = { error: e.message, details: e.details || null };
-        }
+      const product = {
+  id,
+  name,
+  type,
+  short_description,
+  price_cents,
+  currency,
+  image_url,
+  is_active,
+  is_featured,
+  delivery_type,
+  delivery_value,
+  email_body,
+  pdf_url,
+  whatsapp_url: whatsapp_url || "", // <-- NUEVO
+};
+
+      } = payload || {};
+
+      if (!name || !price_cents) {
+        res.statusCode = 400;
+        return res.end(
+          JSON.stringify({ error: "Faltan campos: name o price_cents" })
+        );
       }
 
-      return sendJson(res, 200, { products: [], meta: { debug: true, env }, keys_sample: sample });
+      // Normalizaciones
+      const normalizedIsActive = is_active !== false;
+      const normalizedIsFeatured =
+        is_featured === true ||
+        is_featured === "true" ||
+        is_featured === 1 ||
+        is_featured === "1";
+
+      const productId = id || generateIdFromName(name);
+
+      const normalizedProduct = {
+        id: productId,
+        name,
+        type: type || "other",
+        short_description: short_description || "",
+        price_cents: Number(price_cents),
+        currency: currency || "USD",
+        image_url: image_url || "",
+        is_active: normalizedIsActive,
+        delivery_type: delivery_type || "none",
+        delivery_value: delivery_value || "",
+        email_subject:
+          email_subject ||
+          `Tu compra en Trading Sin Fronteras – ${name}`,
+        email_body: email_body || "",
+        pdf_url: pdf_url || "",
+        // 👇 Flag para "Productos destacados"
+        // Los viejos (sin campo) se consideran destacados hasta que los edites.
+        is_featured:
+          is_featured === undefined ? true : normalizedIsFeatured,
+      };
+
+      const index = products.findIndex((p) => p.id === productId);
+      if (index >= 0) {
+        products[index] = normalizedProduct;
+      } else {
+        products.push(normalizedProduct);
+      }
+
+      await redis.set("tsf:products", products);
+
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ product: normalizedProduct }));
     }
 
-    // 1) Array JSON en una key
-    const jsonKeys = ["products", "shop:products", "store:products", "tsfshop:products", "products:list"];
-    for (const k of jsonKeys) {
-      const arr = await tryGetJsonArrayKey(k);
-      if (arr) return sendJson(res, 200, { products: arr, meta: { source: `get:${k}` } });
+    // -------- DELETE: borrar producto --------
+    if (req.method === "DELETE") {
+      const body = await parseBody(req);
+      const id = body.id || (req.query ? req.query.id : null);
+
+      if (!id) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: "Falta id para borrar" }));
+      }
+
+      const newProducts = products.filter((p) => p.id !== id);
+      await redis.set("tsf:products", newProducts);
+
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ ok: true }));
     }
 
-    // 2) Hashes por patrón
-    const patterns = ["products:*", "product:*", "shop:products:*", "store:products:*", "tsfshop:products:*"];
-    for (const pat of patterns) {
-      const arr = await tryHashes(pat);
-      if (arr) return sendJson(res, 200, { products: arr, meta: { source: `hashes:${pat}` } });
-    }
-
-    return sendJson(res, 200, { products: [], meta: { source: "none" } });
+    // -------- Método no permitido --------
+    res.statusCode = 405;
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: "Method not allowed" }));
   } catch (err) {
-    console.error("[admin-products] CRASH", err.details || err);
-    // Devuelvo 200 con info para que el panel no muestre "Error al cargar" por un 500 crudo
-    return sendJson(res, 200, {
-      products: [],
-      meta: {
-        error: true,
-        message: err && err.message ? err.message : "Unknown error",
-        details: err && err.details ? err.details : null,
-      },
-    });
+    console.error("Error en /api/admin-products:", err);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: "Internal server error" }));
   }
 };
