@@ -536,6 +536,16 @@
             <input id="p-pdf" placeholder="https://.../instructivo.pdf" />
             <div class="help">Si lo completás, en el mail se agrega un link para descargar el PDF.</div>
           </div>
+<div>
+  <label for="p-walink">WALINK (WhatsApp) (opcional)</label>
+  <input
+    id="p-walink"
+    placeholder="https://wa.link/xxxxxx o https://wa.me/54911xxxxxxx"
+  />
+  <small>
+    Si lo completás, el cliente recibirá un botón “WHATSAPP” en el mail.
+  </small>
+</div>
 
           <div class="form-footer">
             <div class="left">
@@ -803,6 +813,7 @@
       document.getElementById("p-delivery").value = "";
       document.getElementById("p-email-body").value = "";
       document.getElementById("p-pdf").value = "";
+document.getElementById("p-walink").value = "";
 
       const msgEl = document.getElementById("admin-form-msg");
       msgEl.textContent = "Completá los datos y guardá el producto. Luego podés editarlo o eliminarlo desde la lista.";
@@ -902,6 +913,7 @@
       const delivery = document.getElementById("p-delivery").value.trim();
       const emailBody = document.getElementById("p-email-body").value.trim();
       const pdfUrl = document.getElementById("p-pdf").value.trim();
+const walink = document.getElementById("p-walink").value.trim();
 
       if (!name || !priceUsd){
         alert("Nombre y precio son obligatorios.");
@@ -924,6 +936,8 @@
         delivery_value: delivery,
         email_body: emailBody,
         pdf_url: pdfUrl,
+        whatsapp_url: walink,
+
       };
 
       const msgEl = document.getElementById("admin-form-msg");
@@ -958,6 +972,7 @@
           if (data && Array.isArray(data.products)){
             __adminProductsCache = data.products;
             updateSummary(__adminProductsCache);
+            
           }
         }
 
@@ -975,6 +990,7 @@
         document.getElementById("p-delivery").value = p.delivery_value || "";
         document.getElementById("p-email-body").value = p.email_body || "";
         document.getElementById("p-pdf").value = p.pdf_url || "";
+document.getElementById("p-walink").value = product.whatsapp_url || "";
 
         const preview = document.getElementById("p-img-preview");
         const status = document.getElementById("p-img-status");
