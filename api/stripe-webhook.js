@@ -169,10 +169,13 @@ export default async function handler(req, res) {
         session?.customer_details?.name ||
         "Cliente";
       const email =
-        session?.metadata?.email ||
-        session?.customer_details?.email ||
-        session?.customer_email ||
-        "—";
+  session?.customer_details?.email ||
+  session?.customer_email ||
+  session?.metadata?.email ||
+  session?.payment_intent?.charges?.data?.[0]?.billing_details?.email ||
+  "";
+console.log("📧 Buyer email detected:", email);
+
       const whatsapp =
         session?.metadata?.whatsapp ||
         session?.metadata?.buyerWhatsApp ||
