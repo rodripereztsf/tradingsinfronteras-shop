@@ -1,10 +1,13 @@
 // api/admin-products.js
-// Next.js / Vercel Serverless (Node)
-// Guarda/lee productos desde Upstash Redis (REST API)
+//
+// CRUD de productos TSF SHOP sobre Upstash Redis
+// Incluye flag is_featured para "Productos destacados"
 
-export const config = {
-  api: { bodyParser: true },
-};
+const { Redis } = require("@upstash/redis");
+
+// ---------------------------
+// Helpers
+// ---------------------------
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -12,136 +15,170 @@ function setCors(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim();
-const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim();
-
-// Clave única en Redis para tu catálogo
-const PRODUCTS_KEY = "tsf_shop_products_v1";
-
-async function upstash(cmd, args = []) {
-  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
-    throw new Error("Faltan env UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN");
+let redisClient = null;
+async function getRedis() {
+  if (!redisClient) {
+    redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
   }
+  return redisClient;
+}
 
-  const res = await fetch(`${UPSTASH_URL}/${cmd}/${args.map(encodeURIComponent).join("/")}`, {
-    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-  });
+function generateIdFromName(name = "") {
+  return (
+    name
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") +
+    "-" +
+    Date.now().toString(36)
+  );
+}
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data?.error || `Upstash error ${res.status}`);
+// Parsear body seguro
+async function parseBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
   }
-  return data;
+  return req.body;
 }
 
-async function readProducts() {
-  const r = await upstash("get", [PRODUCTS_KEY]);
-  // Upstash devuelve { result: "string" } o { result: null }
-  if (!r || r.result == null) return [];
-  try {
-    const parsed = JSON.parse(r.result);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+// ---------------------------
+// Handler principal
+// ---------------------------
 
-async function writeProducts(products) {
-  const payload = JSON.stringify(products || []);
-  await upstash("set", [PRODUCTS_KEY, payload]);
-}
-
-function safeString(x) {
-  return String(x == null ? "" : x).trim();
-}
-
-function toBool(x, defaultValue = false) {
-  if (typeof x === "boolean") return x;
-  if (typeof x === "string") return x.toLowerCase() === "true";
-  return defaultValue;
-}
-
-function normalizeProduct(input) {
-  // Estructura estándar que usa tu tienda + webhook
-  const id = safeString(input.id) || `p_${Math.random().toString(36).slice(2, 10)}`;
-
-  const price_cents = Number.isFinite(Number(input.price_cents))
-    ? Math.max(0, Math.round(Number(input.price_cents)))
-    : 0;
-
-  return {
-    id,
-    name: safeString(input.name),
-    type: safeString(input.type) || "other",
-    short_description: safeString(input.short_description),
-    price_cents,
-    currency: safeString(input.currency || "USD") || "USD",
-    image_url: safeString(input.image_url),
-    is_active: toBool(input.is_active, true),
-    is_featured: toBool(input.is_featured, true),
-    delivery_type: safeString(input.delivery_type || (safeString(input.delivery_value) ? "drive_link" : "none")),
-    delivery_value: safeString(input.delivery_value),
-    email_subject: safeString(input.email_subject),
-    email_body: safeString(input.email_body),
-    pdf_url: safeString(input.pdf_url),
-
-    // ✅ NUEVO: walink por producto
-    walink: safeString(input.walink),
-  };
-}
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   setCors(res);
 
-  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === "OPTIONS") {
+    res.statusCode = 200;
+    return res.end();
+  }
 
   try {
-    // GET -> listar productos (para admin)
+    const redis = await getRedis();
+    let products = await redis.get("tsf:products");
+    if (!Array.isArray(products)) products = [];
+
+    // -------- GET: listado completo para el panel admin --------
     if (req.method === "GET") {
-      const products = await readProducts();
-      return res.status(200).json({ products });
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ products }));
     }
 
-    // POST -> crear/editar
+    // -------- POST: crear / actualizar producto --------
     if (req.method === "POST") {
-      const body = req.body || {};
+      const payload = await parseBody(req);
 
-      const incoming = normalizeProduct(body);
+      const product = {
+  id,
+  name,
+  type,
+  short_description,
+  price_cents,
+  currency,
+  image_url,
+  is_active,
+  is_featured,
+  delivery_type,
+  delivery_value,
+  email_body,
+  pdf_url,
+  whatsapp_url: whatsapp_url || "", // <-- NUEVO
+};
 
-      if (!incoming.name) return res.status(400).json({ error: "Nombre obligatorio" });
-      if (!incoming.price_cents || incoming.price_cents <= 0) {
-        return res.status(400).json({ error: "Precio inválido" });
+      } = payload || {};
+
+      if (!name || !price_cents) {
+        res.statusCode = 400;
+        return res.end(
+          JSON.stringify({ error: "Faltan campos: name o price_cents" })
+        );
       }
 
-      const products = await readProducts();
+      // Normalizaciones
+      const normalizedIsActive = is_active !== false;
+      const normalizedIsFeatured =
+        is_featured === true ||
+        is_featured === "true" ||
+        is_featured === 1 ||
+        is_featured === "1";
 
-      const idx = products.findIndex((p) => p.id === incoming.id);
-      if (idx >= 0) {
-        products[idx] = { ...products[idx], ...incoming };
+      const productId = id || generateIdFromName(name);
+
+      const normalizedProduct = {
+        id: productId,
+        name,
+        type: type || "other",
+        short_description: short_description || "",
+        price_cents: Number(price_cents),
+        currency: currency || "USD",
+        image_url: image_url || "",
+        is_active: normalizedIsActive,
+        delivery_type: delivery_type || "none",
+        delivery_value: delivery_value || "",
+        email_subject:
+          email_subject ||
+          `Tu compra en Trading Sin Fronteras – ${name}`,
+        email_body: email_body || "",
+        pdf_url: pdf_url || "",
+        // 👇 Flag para "Productos destacados"
+        // Los viejos (sin campo) se consideran destacados hasta que los edites.
+        is_featured:
+          is_featured === undefined ? true : normalizedIsFeatured,
+      };
+
+      const index = products.findIndex((p) => p.id === productId);
+      if (index >= 0) {
+        products[index] = normalizedProduct;
       } else {
-        products.push(incoming);
+        products.push(normalizedProduct);
       }
 
-      await writeProducts(products);
-      return res.status(200).json({ ok: true, product: incoming, products });
+      await redis.set("tsf:products", products);
+
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ product: normalizedProduct }));
     }
 
-    // DELETE -> eliminar por id
+    // -------- DELETE: borrar producto --------
     if (req.method === "DELETE") {
-      const { id } = req.body || {};
-      const productId = safeString(id);
-      if (!productId) return res.status(400).json({ error: "Falta id" });
+      const body = await parseBody(req);
+      const id = body.id || (req.query ? req.query.id : null);
 
-      const products = await readProducts();
-      const next = products.filter((p) => p.id !== productId);
+      if (!id) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: "Falta id para borrar" }));
+      }
 
-      await writeProducts(next);
-      return res.status(200).json({ ok: true, products: next });
+      const newProducts = products.filter((p) => p.id !== id);
+      await redis.set("tsf:products", newProducts);
+
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ ok: true }));
     }
 
-    return res.status(405).json({ error: "Method Not Allowed" });
+    // -------- Método no permitido --------
+    res.statusCode = 405;
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: "Method not allowed" }));
   } catch (err) {
-    console.error("admin-products error:", err);
-    return res.status(500).json({ error: err?.message || "Internal error" });
+    console.error("Error en /api/admin-products:", err);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: "Internal server error" }));
   }
-}
+};
