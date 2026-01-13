@@ -11,7 +11,7 @@
   <style>
     :root{
       --bg:#020308;
-      --border:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.10);
       --text:#fff;
       --muted:rgba(255,255,255,.72);
       --muted2:rgba(255,255,255,.55);
@@ -25,18 +25,21 @@
     *{box-sizing:border-box}
     body{
       font-family:"Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background: radial-gradient(circle at 30% -10%, rgba(0,207,255,.10), transparent 45%),
-                  radial-gradient(circle at 80% 0%, rgba(0,207,255,.07), transparent 40%),
-                  var(--bg);
+      background:
+        radial-gradient(circle at 30% -10%, rgba(0,207,255,.10), transparent 45%),
+        radial-gradient(circle at 80% 0%, rgba(0,207,255,.07), transparent 40%),
+        var(--bg);
       color:var(--text);
       margin:0;
       min-height:100vh;
     }
+
     .wrap{max-width:1180px;margin:64px auto;padding:0 18px}
-    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px;flex-wrap:wrap}
     .title{font-size:1.9rem;font-weight:800;margin:0}
-    .subtitle{margin:10px 0 0 0;color:var(--muted);font-size:.95rem;line-height:1.5;max-width:860px}
+    .subtitle{margin:10px 0 0 0;color:var(--muted);font-size:.95rem;line-height:1.5;max-width:900px}
     .hint{margin-top:10px;color:var(--muted2);font-size:.85rem}
+
     .panel{
       background: rgba(7,10,16,.62);
       border:1px solid var(--border);
@@ -47,12 +50,100 @@
     .panel-inner{padding:22px}
     .card{
       background: linear-gradient(180deg, rgba(12,14,20,.78), rgba(8,10,16,.62));
-      border:1px solid var(--border);
+      border:1px solid rgba(255,255,255,.08);
       border-radius:var(--radius2);
       padding:16px;
     }
     .card h2{margin:0 0 12px 0;font-size:1.08rem;font-weight:800}
 
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      font-size:.78rem;color: rgba(255,255,255,.72);
+      white-space:nowrap;
+    }
+
+    .summary{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .summary .pill b{color:rgba(255,255,255,.92)}
+    .summary .pill .ok{color:var(--ok);font-weight:900}
+    .summary .pill .no{color:var(--danger);font-weight:900}
+    .summary .pill .ac{color:var(--accent);font-weight:900}
+
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      border-radius:999px;padding:10px 16px;
+      border:1px solid rgba(0,207,255,.45);
+      color:var(--accent);
+      background: rgba(0,207,255,.06);
+      cursor:pointer;font-weight:800;font-size:.86rem;
+      transition: transform .12s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+      user-select:none;
+    }
+    .btn:hover{background: rgba(0,207,255,.14);transform: translateY(-1px);border-color: rgba(0,207,255,.7)}
+    .btn:disabled{opacity:.45;cursor:default;transform:none}
+    .btn.small{
+      padding:7px 12px;font-size:.78rem;
+      background: rgba(255,255,255,.04);
+      border-color: rgba(255,255,255,.14);
+      color: rgba(255,255,255,.82);
+    }
+    .btn.small:hover{background: rgba(255,255,255,.08);border-color: rgba(0,207,255,.55);color:var(--accent)}
+    .btn.danger{border-color: rgba(255,92,92,.45);color:var(--danger);background: rgba(255,92,92,.06)}
+    .btn.danger:hover{background: rgba(255,92,92,.14);border-color: rgba(255,92,92,.7)}
+    .btn.primary{border-color: rgba(0,207,255,.55);background: rgba(0,207,255,.12)}
+
+    /* CONTROLES (buscar / filtros / ordenar) */
+    .controls{
+      margin: 10px 0 12px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .controls-left, .controls-right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:flex-end;
+    }
+    .control{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 180px;
+    }
+    .ctl-label{
+      font-size:.78rem;
+      font-weight:800;
+      color: rgba(255,255,255,.72);
+    }
+    .controls input, .controls select{
+      width:100%;
+      background: rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;
+      border-radius:999px;
+      padding:10px 12px;
+      font-family:inherit;
+      font-size:.90rem;
+      outline:none;
+      transition:border-color .18s ease, box-shadow .18s ease;
+    }
+    .controls input:focus, .controls select:focus{
+      border-color: rgba(0,207,255,.55);
+      box-shadow: 0 0 0 3px rgba(0,207,255,.14);
+    }
+    #count-pill{font-weight: 900}
+
+    /* TABLA */
     .table-wrap{
       width:100%;
       overflow:auto;
@@ -60,7 +151,7 @@
       border:1px solid rgba(255,255,255,.06);
       background: rgba(0,0,0,.35);
     }
-    table{width:100%;border-collapse:collapse;min-width:780px;font-size:.86rem}
+    table{width:100%;border-collapse:collapse;min-width:860px;font-size:.86rem}
     thead th{
       text-align:left;
       padding:12px 12px;
@@ -91,85 +182,10 @@
     .badge.ok{border-color: rgba(46,204,113,.35);color:var(--ok);background: rgba(46,204,113,.07)}
     .badge.no{border-color: rgba(255,92,92,.35);color:var(--danger);background: rgba(255,92,92,.06)}
 
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      border-radius:999px;padding:10px 16px;
-      border:1px solid rgba(0,207,255,.45);
-      color:var(--accent);
-      background: rgba(0,207,255,.06);
-      cursor:pointer;font-weight:800;font-size:.86rem;
-      transition: transform .12s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
-      user-select:none;
-    }
-    .btn:hover{background: rgba(0,207,255,.14);transform: translateY(-1px);border-color: rgba(0,207,255,.7)}
-    .btn:disabled{opacity:.45;cursor:default;transform:none}
-    .btn.small{
-      padding:7px 12px;font-size:.78rem;
-      background: rgba(255,255,255,.04);
-      border-color: rgba(255,255,255,.14);
-      color: rgba(255,255,255,.82);
-    }
-    .btn.small:hover{background: rgba(255,255,255,.08);border-color: rgba(0,207,255,.55);color:var(--accent)}
-    .btn.danger{border-color: rgba(255,92,92,.45);color:var(--danger);background: rgba(255,92,92,.06)}
-    .btn.danger:hover{background: rgba(255,92,92,.14);border-color: rgba(255,92,92,.7)}
-    .btn.primary{border-color: rgba(0,207,255,.55);background: rgba(0,207,255,.12)}
-
     .toolbar{
       display:flex;align-items:center;justify-content:space-between;gap:10px;
       margin-top:12px;flex-wrap:wrap;
     }
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 12px;border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      font-size:.78rem;color: rgba(255,255,255,.72);
-      white-space:nowrap;
-    }
-.controls{
-  margin-top: 10px;
-  margin-bottom: 12px;
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.controls-left, .controls-right{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:flex-end;
-}
-.control{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  min-width: 180px;
-}
-.ctl-label{
-  font-size:.78rem;
-  font-weight:800;
-  color: rgba(255,255,255,.72);
-}
-#q{
-  border-radius: 999px;
-  padding: 10px 12px;
-}
-.controls select{
-  border-radius: 999px;
-  padding: 10px 12px;
-  background: rgba(0,0,0,.35);
-}
-#count-pill{
-  font-weight: 900;
-}
-
-@media (max-width: 520px){
-  .control{min-width: 100%;}
-  .controls-left, .controls-right{width:100%;}
-  #count-pill{width:100%; justify-content:center;}
-}
 
     /* LOGIN */
     .login{
@@ -191,7 +207,7 @@
     }
     .msg{font-size:.82rem;color: rgba(255,255,255,.68);line-height:1.35;margin:10px 0 0 0;min-height:18px}
 
-    /* ====== MODAL / PANEL FORM ====== */
+    /* ====== MODAL FORM ====== */
     .modal{
       position: fixed;
       inset: 0;
@@ -281,11 +297,8 @@
     .form-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
     .form-footer .left, .form-footer .right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
-    @media (max-width: 980px){
-      .wrap{margin:40px auto}
-      table{min-width:720px}
-    }
     @media (max-width: 520px){
+      .wrap{margin:40px auto}
       .panel-inner{padding:16px}
       .card{padding:14px}
       .title{font-size:1.55rem}
@@ -294,6 +307,10 @@
       input[type="file"]{max-width:100%}
       .modal{padding: 10px;}
       .modal-sheet{max-height: 95vh;}
+      .control{min-width: 100%;}
+      .controls-left, .controls-right{width:100%;}
+      #count-pill{width:100%; justify-content:center;}
+      table{min-width:720px}
     }
   </style>
 </head>
@@ -317,8 +334,17 @@
       <div>
         <h1 class="title">Panel de productos · TSF SHOP</h1>
         <p class="subtitle">
-          Vista lista (ancha). Tocá <b>+ Nuevo producto</b> o <b>Editar</b> para abrir el formulario.
+          Buscá, filtrá y ordená. Tocá <b>+ Nuevo producto</b> o <b>Editar</b> para abrir el formulario.
         </p>
+
+        <!-- MINI RESUMEN -->
+        <div class="summary">
+          <span class="pill">Total: <b id="sum-total">0</b></span>
+          <span class="pill">Activos: <span class="ok" id="sum-active">0</span></span>
+          <span class="pill">Ocultos: <span class="no" id="sum-inactive">0</span></span>
+          <span class="pill">Destacados: <span class="ac" id="sum-featured">0</span></span>
+        </div>
+
         <div class="hint">Todo se guarda en Upstash. Las imágenes se suben a Cloudinary.</div>
       </div>
 
@@ -331,60 +357,61 @@
       <div class="panel-inner">
         <section class="card">
           <h2>Productos actuales</h2>
-<!-- Controles: buscar / filtrar / ordenar -->
-<div class="controls">
-  <div class="controls-left">
-    <div class="control">
-      <label class="ctl-label" for="q">Buscar</label>
-      <input id="q" type="text" placeholder="Nombre, tipo o precio..." />
-    </div>
 
-    <div class="control">
-      <label class="ctl-label" for="f-type">Tipo</label>
-      <select id="f-type">
-        <option value="all">Todos</option>
-        <option value="course">Formación / Curso</option>
-        <option value="indicator">Indicador</option>
-        <option value="bot">Bot / Robot</option>
-        <option value="physical">Producto físico</option>
-        <option value="other">Otro</option>
-      </select>
-    </div>
+          <!-- CONTROLES -->
+          <div class="controls">
+            <div class="controls-left">
+              <div class="control">
+                <label class="ctl-label" for="q">Buscar (en vivo)</label>
+                <input id="q" type="text" placeholder="Nombre, tipo o precio..." />
+              </div>
 
-    <div class="control">
-      <label class="ctl-label" for="f-active">Activo</label>
-      <select id="f-active">
-        <option value="all">Todos</option>
-        <option value="true">Activos</option>
-        <option value="false">Ocultos</option>
-      </select>
-    </div>
+              <div class="control">
+                <label class="ctl-label" for="f-type">Tipo</label>
+                <select id="f-type">
+                  <option value="all">Todos</option>
+                  <option value="course">Formación / Curso</option>
+                  <option value="indicator">Indicador</option>
+                  <option value="bot">Bot / Robot</option>
+                  <option value="physical">Producto físico</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
 
-    <div class="control">
-      <label class="ctl-label" for="f-featured">Destacado</label>
-      <select id="f-featured">
-        <option value="all">Todos</option>
-        <option value="true">Destacados</option>
-        <option value="false">No destacados</option>
-      </select>
-    </div>
-  </div>
+              <div class="control">
+                <label class="ctl-label" for="f-active">Activo</label>
+                <select id="f-active">
+                  <option value="all">Todos</option>
+                  <option value="true">Activos</option>
+                  <option value="false">Ocultos</option>
+                </select>
+              </div>
 
-  <div class="controls-right">
-    <div class="control">
-      <label class="ctl-label" for="sort">Orden</label>
-      <select id="sort">
-        <option value="name_asc">Nombre A→Z</option>
-        <option value="name_desc">Nombre Z→A</option>
-        <option value="price_asc">Precio ↑</option>
-        <option value="price_desc">Precio ↓</option>
-      </select>
-    </div>
+              <div class="control">
+                <label class="ctl-label" for="f-featured">Destacado</label>
+                <select id="f-featured">
+                  <option value="all">Todos</option>
+                  <option value="true">Destacados</option>
+                  <option value="false">No destacados</option>
+                </select>
+              </div>
+            </div>
 
-    <button class="btn small" type="button" id="clear-filters">Limpiar</button>
-    <span class="pill" id="count-pill">0 productos</span>
-  </div>
-</div>
+            <div class="controls-right">
+              <div class="control">
+                <label class="ctl-label" for="sort">Orden</label>
+                <select id="sort">
+                  <option value="name_asc">Nombre A→Z</option>
+                  <option value="name_desc">Nombre Z→A</option>
+                  <option value="price_asc">Precio ↑</option>
+                  <option value="price_desc">Precio ↓</option>
+                </select>
+              </div>
+
+              <button class="btn small" type="button" id="clear-filters">Limpiar</button>
+              <span class="pill" id="count-pill">0 productos</span>
+            </div>
+          </div>
 
           <div class="table-wrap">
             <table>
@@ -509,6 +536,16 @@
             <input id="p-pdf" placeholder="https://.../instructivo.pdf" />
             <div class="help">Si lo completás, en el mail se agrega un link para descargar el PDF.</div>
           </div>
+<div>
+  <label for="p-walink">WALINK (WhatsApp) (opcional)</label>
+  <input
+    id="p-walink"
+    placeholder="https://wa.link/xxxxxx o https://wa.me/54911xxxxxxx"
+  />
+  <small>
+    Si lo completás, el cliente recibirá un botón “WHATSAPP” en el mail.
+  </small>
+</div>
 
           <div class="form-footer">
             <div class="left">
@@ -529,7 +566,7 @@
   </div>
 
   <script>
-    // ⚠️ Esto está en frontend (se ve). Después lo blindamos con backend si querés.
+    // ⚠️ Frontend password (como lo tenías). Más adelante se blinda con backend si querés.
     const ADMIN_PASSWORD = "tsfadmin2025";
     const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
@@ -539,6 +576,8 @@
 
     document.getElementById("api-pill").textContent = API_BASE;
 
+    let __adminProductsCache = [];
+
     function handleAdminLogin(){
       const input = document.getElementById("admin-password");
       const msg = document.getElementById("admin-login-msg");
@@ -546,7 +585,7 @@
       if (input.value === ADMIN_PASSWORD){
         document.getElementById("admin-login").style.display = "none";
         document.getElementById("admin-panel").style.display = "block";
-        loadAdminProducts();
+        afterAdminLoginInit();
       } else {
         msg.textContent = "Contraseña incorrecta.";
         input.value = "";
@@ -562,11 +601,8 @@
 
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden","false");
-
-      // lock scroll
       document.body.style.overflow = "hidden";
 
-      // focus first input
       setTimeout(() => {
         const name = document.getElementById("p-name");
         if (name) name.focus();
@@ -580,7 +616,6 @@
       document.body.style.overflow = "";
     }
 
-    // ESC cierra
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape"){
         const modal = document.getElementById("form-modal");
@@ -597,167 +632,205 @@
         .replaceAll("'","&#039;");
     }
 
-    let __adminProductsCache = [];
+    // ===== Resumen arriba =====
+    function updateSummary(products){
+      const total = products.length;
+      const active = products.filter(p => !!p.is_active).length;
+      const inactive = total - active;
+      const featured = products.filter(p => (p.is_featured === false ? false : true)).length;
 
-function getFilters() {
-  return {
-    q: (document.getElementById("q")?.value || "").trim().toLowerCase(),
-    type: document.getElementById("f-type")?.value || "all",
-    active: document.getElementById("f-active")?.value || "all",
-    featured: document.getElementById("f-featured")?.value || "all",
-    sort: document.getElementById("sort")?.value || "name_asc",
-  };
-}
+      const t = document.getElementById("sum-total");
+      const a = document.getElementById("sum-active");
+      const i = document.getElementById("sum-inactive");
+      const f = document.getElementById("sum-featured");
 
-function applyFiltersAndSort(products) {
-  const f = getFilters();
-
-  let out = [...products];
-
-  // filter: type
-  if (f.type !== "all") {
-    out = out.filter(p => (p.type || "other") === f.type);
-  }
-
-  // filter: active
-  if (f.active !== "all") {
-    const want = f.active === "true";
-    out = out.filter(p => !!p.is_active === want);
-  }
-
-  // filter: featured
-  if (f.featured !== "all") {
-    const want = f.featured === "true";
-    out = out.filter(p => (p.is_featured === false ? false : true) === want);
-  }
-
-  // search (name/type/price)
-  if (f.q) {
-    out = out.filter(p => {
-      const name = String(p.name || "").toLowerCase();
-      const type = String(p.type || "").toLowerCase();
-      const price = String((Number(p.price_cents || 0) / 100).toFixed(2)).toLowerCase();
-      return name.includes(f.q) || type.includes(f.q) || price.includes(f.q);
-    });
-  }
-
-  // sort
-  out.sort((a,b) => {
-    const an = String(a.name || "").toLowerCase();
-    const bn = String(b.name || "").toLowerCase();
-    const ap = Number(a.price_cents || 0);
-    const bp = Number(b.price_cents || 0);
-
-    switch (f.sort) {
-      case "name_desc": return bn.localeCompare(an);
-      case "price_asc": return ap - bp;
-      case "price_desc": return bp - ap;
-      case "name_asc":
-      default: return an.localeCompare(bn);
+      if (t) t.textContent = String(total);
+      if (a) a.textContent = String(active);
+      if (i) i.textContent = String(inactive);
+      if (f) f.textContent = String(featured);
     }
-  });
 
-  return out;
-}
+    function getFilters(){
+      return {
+        q: (document.getElementById("q")?.value || "").trim().toLowerCase(),
+        type: document.getElementById("f-type")?.value || "all",
+        active: document.getElementById("f-active")?.value || "all",
+        featured: document.getElementById("f-featured")?.value || "all",
+        sort: document.getElementById("sort")?.value || "name_asc",
+      };
+    }
 
-function renderAdminTable(products) {
-  const tbody = document.getElementById("admin-products-tbody");
-  const countPill = document.getElementById("count-pill");
+    function applyFiltersAndSort(products){
+      const f = getFilters();
+      let out = [...products];
 
-  if (!tbody) return;
+      if (f.type !== "all"){
+        out = out.filter(p => (p.type || "other") === f.type);
+      }
 
-  if (!products.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No hay resultados con esos filtros.</td></tr>';
-    if (countPill) countPill.textContent = "0 productos";
-    return;
-  }
+      if (f.active !== "all"){
+        const want = f.active === "true";
+        out = out.filter(p => !!p.is_active === want);
+      }
 
-  tbody.innerHTML = "";
+      if (f.featured !== "all"){
+        const want = f.featured === "true";
+        out = out.filter(p => (p.is_featured === false ? false : true) === want);
+      }
 
-  products.forEach((p) => {
-    const tr = document.createElement("tr");
+      if (f.q){
+        out = out.filter(p => {
+          const name = String(p.name || "").toLowerCase();
+          const type = String(p.type || "").toLowerCase();
+          const price = String((Number(p.price_cents || 0) / 100).toFixed(2)).toLowerCase();
+          return name.includes(f.q) || type.includes(f.q) || price.includes(f.q);
+        });
+      }
 
-    tr.innerHTML = `
-      <td style="font-weight:800;">${escapeHtml(p.name || "")}</td>
-      <td>USD ${(Number(p.price_cents || 0) / 100).toFixed(2)}</td>
-      <td>${escapeHtml(p.type || "-")}</td>
-      <td>
-        <span class="badge ${p.is_active ? "ok" : "no"}">
-          ${p.is_active ? "Activo" : "Oculto"}
-        </span>
-      </td>
-      <td>${p.is_featured === false ? "No" : "Sí"}</td>
-      <td class="col-actions">
-        <button class="btn small" type="button" onclick="editProduct('${p.id}')">Editar</button>
-        <button class="btn small danger" type="button" onclick="deleteProduct('${p.id}')">Eliminar</button>
-      </td>
-    `;
+      out.sort((a,b) => {
+        const an = String(a.name || "").toLowerCase();
+        const bn = String(b.name || "").toLowerCase();
+        const ap = Number(a.price_cents || 0);
+        const bp = Number(b.price_cents || 0);
 
-    tbody.appendChild(tr);
-  });
+        switch (f.sort){
+          case "name_desc": return bn.localeCompare(an);
+          case "price_asc": return ap - bp;
+          case "price_desc": return bp - ap;
+          case "name_asc":
+          default: return an.localeCompare(bn);
+        }
+      });
 
-  if (countPill) countPill.textContent = `${products.length} producto${products.length === 1 ? "" : "s"}`;
-}
+      return out;
+    }
 
-async function loadAdminProducts() {
-  const tbody = document.getElementById("admin-products-tbody");
-  if (tbody) tbody.innerHTML = '<tr><td colspan="6">Cargando productos...</td></tr>';
+    function renderAdminTable(products){
+      const tbody = document.getElementById("admin-products-tbody");
+      const countPill = document.getElementById("count-pill");
+      if (!tbody) return;
 
-  try {
-    const res = await fetch(`${API_BASE}/api/admin-products`);
-    const data = await res.json();
+      if (!products.length){
+        tbody.innerHTML = '<tr><td colspan="6">No hay resultados con esos filtros.</td></tr>';
+        if (countPill) countPill.textContent = "0 productos";
+        return;
+      }
 
-    if (!data || !Array.isArray(data.products)) throw new Error("Respuesta inválida");
-    __adminProductsCache = data.products || [];
+      tbody.innerHTML = "";
 
-    // aplica filtros actuales
-    const filtered = applyFiltersAndSort(__adminProductsCache);
-    renderAdminTable(filtered);
-  } catch (err) {
-    console.error(err);
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6">Error al cargar productos.</td></tr>';
-  }
-}
+      products.forEach((p) => {
+        const tr = document.createElement("tr");
 
-function refreshAdminTableFromControls() {
-  const filtered = applyFiltersAndSort(__adminProductsCache || []);
-  renderAdminTable(filtered);
-}
+        tr.innerHTML = `
+          <td style="font-weight:800;">${escapeHtml(p.name || "")}</td>
+          <td>USD ${(Number(p.price_cents || 0) / 100).toFixed(2)}</td>
+          <td>${escapeHtml(p.type || "-")}</td>
+          <td>
+            <span class="badge ${p.is_active ? "ok" : "no"}">
+              ${p.is_active ? "Activo" : "Oculto"}
+            </span>
+          </td>
+          <td>${p.is_featured === false ? "No" : "Sí"}</td>
+          <td class="col-actions">
+            <button class="btn small" type="button" onclick="editProduct('${p.id}')">Editar</button>
+            <button class="btn small danger" type="button" onclick="deleteProduct('${p.id}')">Eliminar</button>
+          </td>
+        `;
 
-function wireAdminControls() {
-  const ids = ["q", "f-type", "f-active", "f-featured", "sort"];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener(id === "q" ? "input" : "change", refreshAdminTableFromControls);
-  });
+        tbody.appendChild(tr);
+      });
 
-  const clearBtn = document.getElementById("clear-filters");
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      const q = document.getElementById("q");
-      const t = document.getElementById("f-type");
-      const a = document.getElementById("f-active");
-      const f = document.getElementById("f-featured");
-      const s = document.getElementById("sort");
+      if (countPill) countPill.textContent = `${products.length} producto${products.length === 1 ? "" : "s"}`;
+    }
 
-      if (q) q.value = "";
-      if (t) t.value = "all";
-      if (a) a.value = "all";
-      if (f) f.value = "all";
-      if (s) s.value = "name_asc";
+    function refreshAdminTableFromControls(){
+      const filtered = applyFiltersAndSort(__adminProductsCache || []);
+      renderAdminTable(filtered);
+    }
 
-      refreshAdminTableFromControls();
-    });
-  }
-}
+    function wireAdminControls(){
+      const ids = ["q","f-type","f-active","f-featured","sort"];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener(id === "q" ? "input" : "change", refreshAdminTableFromControls);
+      });
 
-// Importante: llamalo una vez cuando ya existe el HTML (después de login OK)
-function afterAdminLoginInit() {
-  wireAdminControls();
-  loadAdminProducts();
-}
+      const clearBtn = document.getElementById("clear-filters");
+      if (clearBtn){
+        clearBtn.addEventListener("click", () => {
+          const q = document.getElementById("q");
+          const t = document.getElementById("f-type");
+          const a = document.getElementById("f-active");
+          const f = document.getElementById("f-featured");
+          const s = document.getElementById("sort");
 
+          if (q) q.value = "";
+          if (t) t.value = "all";
+          if (a) a.value = "all";
+          if (f) f.value = "all";
+          if (s) s.value = "name_asc";
+
+          refreshAdminTableFromControls();
+        });
+      }
+    }
+
+    async function loadAdminProducts(){
+      const tbody = document.getElementById("admin-products-tbody");
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6">Cargando productos...</td></tr>';
+
+      try{
+        const res = await fetch(`${API_BASE}/api/admin-products`);
+        const data = await res.json();
+        if (!data || !Array.isArray(data.products)) throw new Error("Respuesta inválida");
+
+        __adminProductsCache = data.products || [];
+        updateSummary(__adminProductsCache);
+
+        const filtered = applyFiltersAndSort(__adminProductsCache);
+        renderAdminTable(filtered);
+      }catch(err){
+        console.error(err);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6">Error al cargar productos.</td></tr>';
+      }
+    }
+
+    function afterAdminLoginInit(){
+      wireAdminControls();
+      loadAdminProducts();
+    }
+
+    function resetForm(){
+      document.getElementById("p-id").value = "";
+      document.getElementById("p-name").value = "";
+      document.getElementById("p-price").value = "";
+      document.getElementById("p-type").value = "course";
+      document.getElementById("p-desc").value = "";
+      document.getElementById("p-img").value = "";
+      document.getElementById("p-active").value = "true";
+      document.getElementById("p-featured").value = "true";
+      document.getElementById("p-delivery").value = "";
+      document.getElementById("p-email-body").value = "";
+      document.getElementById("p-pdf").value = "";
+document.getElementById("p-walink").value = "";
+
+      const msgEl = document.getElementById("admin-form-msg");
+      msgEl.textContent = "Completá los datos y guardá el producto. Luego podés editarlo o eliminarlo desde la lista.";
+
+      const preview = document.getElementById("p-img-preview");
+      const status = document.getElementById("p-img-status");
+      if (preview){ preview.style.display = "none"; preview.src = ""; }
+      if (status){ status.textContent = "Podés subir una imagen desde tu PC; guardaremos la URL automáticamente."; }
+
+      const fileInput = document.getElementById("p-img-file");
+      if (fileInput) fileInput.value = "";
+    }
+
+    function openFormForNew(){
+      resetForm();
+      openFormModal("Crear nuevo producto");
+    }
 
     // === SUBIDA A CLOUDINARY ===
     async function uploadImageFile(file){
@@ -840,6 +913,7 @@ function afterAdminLoginInit() {
       const delivery = document.getElementById("p-delivery").value.trim();
       const emailBody = document.getElementById("p-email-body").value.trim();
       const pdfUrl = document.getElementById("p-pdf").value.trim();
+const walink = document.getElementById("p-walink").value.trim();
 
       if (!name || !priceUsd){
         alert("Nombre y precio son obligatorios.");
@@ -862,6 +936,8 @@ function afterAdminLoginInit() {
         delivery_value: delivery,
         email_body: emailBody,
         pdf_url: pdfUrl,
+        whatsapp_url: walink,
+
       };
 
       const msgEl = document.getElementById("admin-form-msg");
@@ -889,29 +965,37 @@ function afterAdminLoginInit() {
 
     async function editProduct(id){
       try{
-        const res = await fetch(`${API_BASE}/api/admin-products`);
-        const data = await res.json();
-        if (!data || !Array.isArray(data.products)) return;
+        const product = (__adminProductsCache || []).find(p => p.id === id);
+        if (!product){
+          const res = await fetch(`${API_BASE}/api/admin-products`);
+          const data = await res.json();
+          if (data && Array.isArray(data.products)){
+            __adminProductsCache = data.products;
+            updateSummary(__adminProductsCache);
+            
+          }
+        }
 
-        const product = data.products.find((p) => p.id === id);
-        if (!product) return;
+        const p = (__adminProductsCache || []).find(x => x.id === id);
+        if (!p) return;
 
-        document.getElementById("p-id").value = product.id || "";
-        document.getElementById("p-name").value = product.name || "";
-        document.getElementById("p-price").value = product.price_cents != null ? (product.price_cents / 100).toFixed(2) : "";
-        document.getElementById("p-type").value = product.type || "other";
-        document.getElementById("p-desc").value = product.short_description || "";
-        document.getElementById("p-img").value = product.image_url || "";
-        document.getElementById("p-active").value = product.is_active ? "true" : "false";
-        document.getElementById("p-featured").value = product.is_featured === false ? "false" : "true";
-        document.getElementById("p-delivery").value = product.delivery_value || "";
-        document.getElementById("p-email-body").value = product.email_body || "";
-        document.getElementById("p-pdf").value = product.pdf_url || "";
+        document.getElementById("p-id").value = p.id || "";
+        document.getElementById("p-name").value = p.name || "";
+        document.getElementById("p-price").value = p.price_cents != null ? (p.price_cents / 100).toFixed(2) : "";
+        document.getElementById("p-type").value = p.type || "other";
+        document.getElementById("p-desc").value = p.short_description || "";
+        document.getElementById("p-img").value = p.image_url || "";
+        document.getElementById("p-active").value = p.is_active ? "true" : "false";
+        document.getElementById("p-featured").value = p.is_featured === false ? "false" : "true";
+        document.getElementById("p-delivery").value = p.delivery_value || "";
+        document.getElementById("p-email-body").value = p.email_body || "";
+        document.getElementById("p-pdf").value = p.pdf_url || "";
+document.getElementById("p-walink").value = product.whatsapp_url || "";
 
         const preview = document.getElementById("p-img-preview");
         const status = document.getElementById("p-img-status");
-        if (product.image_url && preview){
-          preview.src = product.image_url;
+        if (p.image_url && preview){
+          preview.src = p.image_url;
           preview.style.display = "block";
           status.textContent = "Imagen cargada. Podés cambiarla subiendo un archivo nuevo.";
         } else {
@@ -920,7 +1004,7 @@ function afterAdminLoginInit() {
         }
 
         const msgEl = document.getElementById("admin-form-msg");
-        msgEl.textContent = "Editando producto. Guardá los cambios o tocá “Limpiar” para crear uno nuevo.";
+        msgEl.textContent = "Editando producto. Guardá los cambios.";
 
         openFormModal("Editar producto");
       }catch(e){
