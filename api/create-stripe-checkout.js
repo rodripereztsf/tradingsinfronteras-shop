@@ -11,85 +11,56 @@ function toCurrency(val) {
   return String(val || "usd").trim().toLowerCase();
 }
 
-// Normaliza WhatsApp venga como venga
-function pickWhatsapp(body, customer) {
-  const w =
-    customer?.whatsapp ||
-    customer?.buyerWhatsApp ||
-    customer?.buyer_whatsapp ||
-    customer?.whatsApp ||
-    body?.buyerWhatsApp ||
-    body?.buyer_whatsapp ||
-    body?.whatsapp ||
-    "";
-
-  return String(w || "").trim();
+function sanitizeSellerRef(v) {
+  return String(v || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "");
 }
 
 export default async function handler(req, res) {
   setCors(res);
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST")
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
-      return res
-        .status(500)
-        .json({ error: "Missing STRIPE_SECRET_KEY in Vercel env" });
+      return res.status(500).json({ error: "Missing STRIPE_SECRET_KEY in Vercel env" });
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const body = req.body || {};
 
-    // --- Soportar FORMATO NUEVO (customer/cart) ---
     let customer = body.customer || null;
     let cart = body.cart || null;
-    const currency = toCurrency(body.currency);
+    let currency = toCurrency(body.currency);
 
-    // --- Soportar FORMATO VIEJO (items + buyerX) ---
+    // formato viejo
     if (!customer && (body.buyerName || body.buyerEmail || body.buyerWhatsApp)) {
-      customer = {
-        name: body.buyerName,
-        email: body.buyerEmail,
-        whatsapp: body.buyerWhatsApp,
-      };
+      customer = { name: body.buyerName, email: body.buyerEmail, whatsapp: body.buyerWhatsApp };
     }
-
     if (!cart && Array.isArray(body.items)) {
-      cart = body.items.map((it) => ({
-        name: it.name,
-        price: it.price, // centavos
-        qty: it.quantity || 1,
-      }));
+      cart = body.items.map((it) => ({ name: it.name, price: it.price, qty: it.quantity || 1 }));
     }
 
-    // Validaciones
+    // seller ref (desde el front)
+    const seller_ref = sanitizeSellerRef(body.seller_ref || body.sellerRef || "");
+
     if (!customer?.name || !customer?.email) {
-      return res.status(400).json({
-        error: "Missing customer data",
-        details: { name: !!customer?.name, email: !!customer?.email },
-      });
+      return res.status(400).json({ error: "Missing customer data" });
     }
-
     if (!Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ error: "Empty cart" });
     }
 
-    // WhatsApp blindado
-    const whatsapp = pickWhatsapp(body, customer);
-
-    // Line items: tu precio ya está en centavos
     const line_items = cart.map((item, idx) => {
       const name = String(item?.name || `Item ${idx + 1}`);
       const qty = Number(item?.qty || 1);
 
       const priceCents = Number(item?.price);
       if (!Number.isFinite(priceCents) || priceCents <= 0) {
-        throw new Error(
-          `Invalid price (cents) for "${name}". Got: ${item?.price}`
-        );
+        throw new Error(`Invalid price (cents) for "${name}". Got: ${item?.price}`);
       }
 
       return {
@@ -97,16 +68,14 @@ export default async function handler(req, res) {
         price_data: {
           currency,
           product_data: { name },
-          unit_amount: Math.round(priceCents), // ya son centavos
+          unit_amount: Math.round(priceCents),
         },
       };
     });
 
-    // URLs: ojo con el baseUrl (ideal: tu url completa con /tradingsinfronteras-shop)
     const baseUrl =
-      (process.env.ACCESS_BASE_URL && process.env.ACCESS_BASE_URL.trim()) ||
       (process.env.PUBLIC_SITE_URL && process.env.PUBLIC_SITE_URL.trim()) ||
-      "https://rodripereztsf.github.io/tradingsinfronteras-shop";
+      "https://rodripereztsf.github.io";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -115,22 +84,15 @@ export default async function handler(req, res) {
       cancel_url: `${baseUrl}/cart.html`,
       customer_email: customer.email,
 
-      // Metadata en Session (sirve para completed/expired)
+      // ✅ esto hace que en Stripe lo veas claro
+      client_reference_id: seller_ref || undefined,
+
       metadata: {
         name: String(customer.name),
         email: String(customer.email),
-        whatsapp, // ✅ SIEMPRE ACÁ
+        whatsapp: String(customer.whatsapp || ""),
         currency,
-      },
-
-      // Metadata en PaymentIntent (sirve para payment_failed)
-      payment_intent_data: {
-        metadata: {
-          name: String(customer.name),
-          email: String(customer.email),
-          whatsapp, // ✅ SIEMPRE ACÁ TAMBIÉN
-          currency,
-        },
+        seller_ref: seller_ref || "",
       },
     });
 
@@ -140,8 +102,6 @@ export default async function handler(req, res) {
     return res.status(500).json({
       error: "Stripe checkout failed",
       message: err?.message || String(err),
-      type: err?.type,
-      code: err?.code,
     });
   }
 }
