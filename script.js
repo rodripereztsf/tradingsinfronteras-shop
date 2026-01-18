@@ -450,6 +450,31 @@ async function fetchJsonDebug(url, options) {
 
   return data;
 }
+function getSellerRefFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    return (url.searchParams.get("ref") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function getSellerRef() {
+  // prioridad: localStorage (persistente), si no: URL
+  const fromStore = (localStorage.getItem("tsf_seller_ref") || "").trim();
+  if (fromStore) return fromStore;
+
+  const fromUrl = getSellerRefFromUrl();
+  if (fromUrl) {
+    localStorage.setItem("tsf_seller_ref", fromUrl);
+    return fromUrl;
+  }
+  return "";
+}
+
+function clearSellerRef() {
+  localStorage.removeItem("tsf_seller_ref");
+}
 
 // currency: "usd" o "ars"
 async function payWithStripe(currency = "usd") {
