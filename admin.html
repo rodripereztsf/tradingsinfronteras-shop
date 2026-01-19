@@ -330,6 +330,11 @@
 
   <!-- PANEL -->
   <div id="admin-panel" class="wrap" style="display:none;">
+    <div class="admin-tabs">
+  <button class="tab-btn active" data-tab="products">Productos</button>
+  <button class="tab-btn" data-tab="sellers">Vendedores</button>
+  <button class="tab-btn" data-tab="sales">Ventas</button>
+</div>
     <div class="topbar">
       <div>
         <h1 class="title">Panel de productos · TSF SHOP</h1>
@@ -344,6 +349,68 @@
           <span class="pill">Ocultos: <span class="no" id="sum-inactive">0</span></span>
           <span class="pill">Destacados: <span class="ac" id="sum-featured">0</span></span>
         </div>
+<!-- =============================== -->
+<!-- PANEL VENDEDORES -->
+<!-- =============================== -->
+<div id="tab-sellers" class="tab-content" style="display:none;">
+
+  <h2 class="title">Vendedores</h2>
+  <p class="subtitle">Gestioná vendedores, comisiones y links de referido.</p>
+
+  <div class="card">
+    <h3>Crear vendedor</h3>
+
+    <div class="form-grid">
+      <input id="seller-name" placeholder="Nombre del vendedor">
+      <input id="seller-ref" placeholder="ID único (ej: juan01)">
+      <input id="seller-commission" type="number" placeholder="Comisión %">
+      <button class="btn primary" onclick="createSeller()">Crear vendedor</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Vendedores registrados</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Ref ID</th>
+          <th>Comisión</th>
+          <th>Link</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="sellers-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- =============================== -->
+<!-- PANEL VENTAS POR REFERIDO -->
+<!-- =============================== -->
+<div id="tab-sales" class="tab-content" style="display:none;">
+
+  <h2 class="title">Ventas por vendedor</h2>
+  <p class="subtitle">Historial de ventas atribuidas por referido.</p>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Vendedor</th>
+          <th>Ref ID</th>
+          <th>Cliente</th>
+          <th>Email</th>
+          <th>Total</th>
+          <th>Comisión</th>
+        </tr>
+      </thead>
+      <tbody id="sales-table"></tbody>
+    </table>
+  </div>
+</div>
 
         <div class="hint">Todo se guarda en Upstash. Las imágenes se suben a Cloudinary.</div>
       </div>
