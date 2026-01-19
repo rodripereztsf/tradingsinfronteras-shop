@@ -1003,6 +1003,47 @@
       if (!name || !priceUsd){
         alert("Nombre y precio son obligatorios.");
         return;
+        // ===============================
+// TABS (Productos / Vendedores / Ventas)
+// ===============================
+function initAdminTabs() {
+  const tabButtons = Array.from(document.querySelectorAll(".admin-tabs .tab-btn"));
+  if (!tabButtons.length) return;
+
+  const sections = {
+    products: document.getElementById("tab-products"),
+    sellers: document.getElementById("tab-sellers"),
+    sales: document.getElementById("tab-sales"),
+  };
+
+  function setActive(tabKey) {
+    // botones
+    tabButtons.forEach((b) => {
+      const isActive = b.dataset.tab === tabKey;
+      b.classList.toggle("active", isActive);
+      b.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    // secciones
+    Object.entries(sections).forEach(([key, el]) => {
+      if (!el) return;
+      el.style.display = key === tabKey ? "block" : "none";
+    });
+  }
+
+  // clicks
+  tabButtons.forEach((btn) => {
+    btn.setAttribute("type", "button");
+    btn.setAttribute("role", "tab");
+    btn.addEventListener("click", () => setActive(btn.dataset.tab));
+  });
+
+  // default
+  setActive("products");
+}
+
+initAdminTabs();
+
       }
 
       const price_cents = Math.round(priceUsd * 100);
@@ -1113,6 +1154,35 @@
         alert("Error al eliminar. Revisá consola.");
       }
     }
+    // ===============================
+// TABS DEL PANEL ADMIN
+// ===============================
+
+function initAdminTabs() {
+  const buttons = document.querySelectorAll(".tab-btn");
+  const contents = {
+    products: document.getElementById("tab-products"),
+    sellers: document.getElementById("tab-sellers"),
+    sales: document.getElementById("tab-sales"),
+  };
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+
+      // Botones
+      buttons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      // Paneles
+      Object.entries(contents).forEach(([key, el]) => {
+        if (!el) return;
+        el.style.display = key === tab ? "block" : "none";
+      });
+    });
+  });
+}
+
   </script>
 </body>
 </html>
