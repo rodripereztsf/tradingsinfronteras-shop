@@ -16,24 +16,24 @@ function ensureToast() {
   toast = document.createElement("div");
   toast.id = "tsf-toast";
   toast.style.cssText = `
-  position: fixed;
-  left: 50%;
-  top: 46%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,.88);
-  color: #fff;
-  border: 1px solid rgba(0,207,255,.35);
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-size: 14px;
-  z-index: 9999;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-  max-width: 92vw;
-  text-align: center;
-  box-shadow: 0 16px 50px rgba(0,0,0,.65);
-`;
+    position: fixed;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,.88);
+    color: #fff;
+    border: 1px solid rgba(0,207,255,.35);
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    max-width: 92vw;
+    text-align: center;
+    box-shadow: 0 16px 50px rgba(0,0,0,.65);
+  `;
 
   document.body.appendChild(toast);
   return toast;
@@ -50,6 +50,10 @@ function showToast(message) {
     toast.style.opacity = "0";
   }, 1400);
 }
+
+// ===============================
+// HELPERS
+// ===============================
 
 // Formatear precio desde centavos
 function formatUsdFromCents(cents) {
@@ -88,6 +92,10 @@ function updateCartBadge() {
   btn.textContent = `Carrito (${count})`;
 }
 
+// ===============================
+// CARRITO: ADD / REMOVE / QTY
+// ===============================
+
 // Agregar producto al carrito
 function addToCart(name, priceCents) {
   if (!cart) cart = [];
@@ -108,7 +116,7 @@ function addToCart(name, priceCents) {
 
   saveCartToStorage();
   updateCartBadge();
-  renderCartPage(); // si estás en cart.html, se actualiza la vista
+  renderCartPage(); // si estás en cart.html
   showToast("✅ Producto agregado al carrito");
 }
 
@@ -166,7 +174,8 @@ function renderCartPage() {
   let total = 0;
 
   cart.forEach((item, index) => {
-    const itemTotal = (item.price || 0) * (item.quantity || 1);
+    const qty = Number(item.quantity || 1);
+    const itemTotal = (Number(item.price || 0) * qty) || 0;
     total += itemTotal;
 
     const div = document.createElement("div");
@@ -176,17 +185,17 @@ function renderCartPage() {
       <div class="cart-item-info">
         <h3 class="cart-item-name">${item.name}</h3>
 
-    <div class="qty-controls">
-  <span class="qty-label">Cantidad</span>
-  <button class="qty-btn" type="button" aria-label="Disminuir cantidad" onclick="changeQty(${index}, -1)">−</button>
-  <span class="qty-value">${item.quantity || 1}</span>
-  <button class="qty-btn" type="button" aria-label="Aumentar cantidad" onclick="changeQty(${index}, 1)">+</button>
-</div>
-
+        <div class="qty-controls">
+          <span class="qty-label">Cantidad</span>
+          <button class="qty-btn" type="button" aria-label="Disminuir cantidad" onclick="changeQty(${index}, -1)">−</button>
+          <span class="qty-value">${qty}</span>
+          <button class="qty-btn" type="button" aria-label="Aumentar cantidad" onclick="changeQty(${index}, 1)">+</button>
+        </div>
+      </div>
 
       <div class="cart-item-meta">
         <p class="cart-item-price">USD ${(itemTotal / 100).toFixed(2)}</p>
-        <button class="cart-item-remove" onclick="removeFromCart(${index})">
+        <button class="cart-item-remove" type="button" onclick="removeFromCart(${index})">
           ✕ Eliminar
         </button>
       </div>
@@ -231,12 +240,42 @@ function getProductImageUrl(product) {
 }
 
 // ===============================
+// REFERRAL (VENDEDOR) - captura ?ref= y lo persiste
+// ===============================
+
+function getSellerRefFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    return (url.searchParams.get("ref") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function getSellerRef() {
+  const fromStore = (localStorage.getItem("tsf_seller_ref") || "").trim();
+  if (fromStore) return fromStore;
+
+  const fromUrl = getSellerRefFromUrl();
+  if (fromUrl) {
+    localStorage.setItem("tsf_seller_ref", fromUrl);
+    return fromUrl;
+  }
+
+  return "";
+}
+
+function clearSellerRef() {
+  localStorage.removeItem("tsf_seller_ref");
+}
+
+// ===============================
 // RENDER: PRODUCTOS DESTACADOS
 // ===============================
 
 function renderFeaturedProducts(products) {
   const container = document.getElementById("products-grid");
-  if (!container) return; // por si en alguna página no existe
+  if (!container) return;
 
   container.innerHTML = "<p>Cargando productos...</p>";
 
@@ -255,7 +294,7 @@ function renderFeaturedProducts(products) {
     const card = document.createElement("article");
     card.className = "producto";
 
-    const safeName = product.name.replace(/'/g, "\\'");
+    const safeName = String(product.name || "").replace(/'/g, "\\'");
     const price = formatUsdFromCents(product.price_cents);
     const imgUrl = getProductImageUrl(product);
 
@@ -268,9 +307,7 @@ function renderFeaturedProducts(products) {
       <h3>${product.name}</h3>
       <p class="precio">${price}</p>
       <p class="producto-texto">${product.short_description || ""}</p>
-      <button
-        class="btn-secondary"
-        onclick="addToCart('${safeName}', ${product.price_cents})">
+      <button class="btn-secondary" onclick="addToCart('${safeName}', ${product.price_cents})">
         Agregar al carrito
       </button>
     `;
@@ -314,7 +351,7 @@ function renderProductsByCategory(products) {
     const card = document.createElement("article");
     card.className = "producto";
 
-    const safeName = product.name.replace(/'/g, "\\'");
+    const safeName = String(product.name || "").replace(/'/g, "\\'");
     const price = formatUsdFromCents(product.price_cents);
     const imgUrl = getProductImageUrl(product);
 
@@ -327,9 +364,7 @@ function renderProductsByCategory(products) {
       <h3>${product.name}</h3>
       <p class="precio">${price}</p>
       <p class="producto-texto">${product.short_description || ""}</p>
-      <button
-        class="btn-secondary"
-        onclick="addToCart('${safeName}', ${product.price_cents})">
+      <button class="btn-secondary" onclick="addToCart('${safeName}', ${product.price_cents})">
         Agregar al carrito
       </button>
     `;
@@ -337,7 +372,7 @@ function renderProductsByCategory(products) {
     container.appendChild(card);
   });
 
-  // Si alguna categoría quedó vacía, mostramos mensaje "Próximamente..."
+  // Si alguna categoría quedó vacía
   Object.entries(containersMap).forEach(([key, id]) => {
     const container = document.getElementById(id);
     if (!container) return;
@@ -398,18 +433,6 @@ function updatePayButtonState() {
   payButton.classList.toggle("btn-pay--enabled", allOk);
 }
 
-// Escuchamos cambios en todos los campos (solo existe en cart.html)
-if (nameInput && emailInput && whatsappInput) {
-  ["input", "blur"].forEach((evt) => {
-    nameInput.addEventListener(evt, updatePayButtonState);
-    emailInput.addEventListener(evt, updatePayButtonState);
-    whatsappInput.addEventListener(evt, updatePayButtonState);
-  });
-
-  // Estado inicial
-  updatePayButtonState();
-}
-
 // ===============================
 // STRIPE
 // ===============================
@@ -420,8 +443,10 @@ function setPayButtonLoading(isLoading, labelText) {
   const btn = document.getElementById("pay-button");
   if (!btn) return;
 
+  // Si tenés un span interno, lo cambia; si no, cambia texto del botón
   const label = btn.querySelector(".btn-label");
   if (label && labelText) label.textContent = labelText;
+  if (!label && labelText) btn.textContent = labelText;
 
   btn.classList.toggle("is-loading", !!isLoading);
   btn.disabled = !!isLoading;
@@ -451,40 +476,6 @@ async function fetchJsonDebug(url, options) {
   return data;
 }
 
-// ===============================
-// REFERRAL (Vendedor)
-// ===============================
-
-function getSellerRefFromUrl() {
-  try {
-    const url = new URL(window.location.href);
-    return (url.searchParams.get("ref") || "").trim();
-  } catch {
-    return "";
-  }
-}
-
-function getSellerRef() {
-  // prioridad: localStorage (persistente), si no: URL
-  const fromStore = (localStorage.getItem("tsf_seller_ref") || "").trim();
-  if (fromStore) return fromStore;
-
-  const fromUrl = getSellerRefFromUrl();
-  if (fromUrl) {
-    localStorage.setItem("tsf_seller_ref", fromUrl);
-    return fromUrl;
-  }
-  return "";
-}
-
-function clearSellerRef() {
-  localStorage.removeItem("tsf_seller_ref");
-}
-
-// ===============================
-// Pago Stripe
-// ===============================
-
 // currency: "usd" o "ars"
 async function payWithStripe(currency = "usd") {
   loadCartFromStorage();
@@ -503,11 +494,10 @@ async function payWithStripe(currency = "usd") {
     return;
   }
 
-  // ✅ Referral ID (vendedor)
+  // Referral ID (vendedor)
   const referralId = getSellerRef();
   console.log("🧾 Referral ID detectado:", referralId || "DIRECTO");
 
-  // ✅ Activamos loading
   setPayButtonLoading(true, "Redirigiendo…");
 
   try {
@@ -516,7 +506,7 @@ async function payWithStripe(currency = "usd") {
         name: buyerName,
         email: buyerEmail,
         whatsapp: buyerWhatsApp,
-        referral_id: referralId, // ✅
+        referral_id: referralId,
       },
       cart: cart.map((item) => ({
         name: item.name,
@@ -539,14 +529,10 @@ async function payWithStripe(currency = "usd") {
 
     console.error("Respuesta Stripe inesperada:", data);
     alert("Respuesta Stripe inesperada. Mirá consola.");
-
-    // ✅ Si no redirige, apagamos loading
     setPayButtonLoading(false, "PAGAR (ARS o USD)");
   } catch (e) {
     console.error("payWithStripe error:", e);
     alert(e?.message || "Error al conectar con Stripe. Intentá nuevamente.");
-
-    // ✅ Si falla, apagamos loading
     setPayButtonLoading(false, "PAGAR (ARS o USD)");
   }
 }
@@ -558,19 +544,16 @@ document.addEventListener("click", (e) => {
 
   if (t.id === "pay-usd") payWithStripe("usd");
   if (t.id === "pay-ars") payWithStripe("ars");
-
-  // Si usás un solo botón:
   if (t.id === "pay-button") payWithStripe("usd");
 });
 
-// ✅ Fix: si el usuario vuelve “atrás” desde Stripe, reseteamos el botón
+// Fix: si el usuario vuelve “atrás” desde Stripe
 window.addEventListener("pageshow", () => {
   setPayButtonLoading(false, "PAGAR (ARS o USD)");
 });
 
-
 // ===============================
-// SPLASH (siempre que cargás index)
+// SPLASH (solo existe si estás en index)
 // ===============================
 
 function runSplash() {
@@ -595,7 +578,6 @@ function runSplash() {
 
   setTimeout(() => {
     splash.style.opacity = "0";
-
     app.classList.add("tsf-blur-off");
     app.classList.remove("tsf-blur");
 
@@ -612,10 +594,10 @@ function runSplash() {
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // ✅ Splash SIEMPRE (cada refresh / cada vez que volvés a index)
+  // Splash (si existe en la página)
   runSplash();
 
-  // Año en el footer
+  // Año en footer
   const yearEl = document.getElementById("year");
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
@@ -624,6 +606,16 @@ document.addEventListener("DOMContentLoaded", () => {
   updateCartBadge();
   renderCartPage();
 
-  // Productos
+  // Validación inputs (solo si existen)
+  if (nameInput && emailInput && whatsappInput) {
+    ["input", "blur"].forEach((evt) => {
+      nameInput.addEventListener(evt, updatePayButtonState);
+      emailInput.addEventListener(evt, updatePayButtonState);
+      whatsappInput.addEventListener(evt, updatePayButtonState);
+    });
+    updatePayButtonState();
+  }
+
+  // Productos (solo si hay secciones)
   initProducts();
 });
