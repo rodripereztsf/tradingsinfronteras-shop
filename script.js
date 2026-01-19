@@ -450,6 +450,11 @@ async function fetchJsonDebug(url, options) {
 
   return data;
 }
+
+// ===============================
+// REFERRAL (Vendedor)
+// ===============================
+
 function getSellerRefFromUrl() {
   try {
     const url = new URL(window.location.href);
@@ -476,6 +481,10 @@ function clearSellerRef() {
   localStorage.removeItem("tsf_seller_ref");
 }
 
+// ===============================
+// Pago Stripe
+// ===============================
+
 // currency: "usd" o "ars"
 async function payWithStripe(currency = "usd") {
   loadCartFromStorage();
@@ -494,6 +503,10 @@ async function payWithStripe(currency = "usd") {
     return;
   }
 
+  // ✅ Referral ID (vendedor)
+  const referralId = getSellerRef();
+  console.log("🧾 Referral ID detectado:", referralId || "DIRECTO");
+
   // ✅ Activamos loading
   setPayButtonLoading(true, "Redirigiendo…");
 
@@ -503,6 +516,7 @@ async function payWithStripe(currency = "usd") {
         name: buyerName,
         email: buyerEmail,
         whatsapp: buyerWhatsApp,
+        referral_id: referralId, // ✅
       },
       cart: cart.map((item) => ({
         name: item.name,
@@ -512,14 +526,11 @@ async function payWithStripe(currency = "usd") {
       currency: String(currency).trim().toLowerCase(),
     };
 
-    const data = await fetchJsonDebug(
-      `${API_BASE}/api/create-stripe-checkout`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
+    const data = await fetchJsonDebug(`${API_BASE}/api/create-stripe-checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
     if (data?.url) {
       window.location.href = data.url;
@@ -550,6 +561,11 @@ document.addEventListener("click", (e) => {
 
   // Si usás un solo botón:
   if (t.id === "pay-button") payWithStripe("usd");
+});
+
+// ✅ Fix: si el usuario vuelve “atrás” desde Stripe, reseteamos el botón
+window.addEventListener("pageshow", () => {
+  setPayButtonLoading(false, "PAGAR (ARS o USD)");
 });
 
 
