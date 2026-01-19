@@ -1223,6 +1223,41 @@ function initAdminTabs() {
     });
   });
 }
+function setActiveTab(tabName) {
+  // botones
+  document.querySelectorAll(".tab-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === tabName);
+  });
+
+  // paneles
+  const panels = {
+    products: document.getElementById("tab-products"),
+    sellers: document.getElementById("tab-sellers"),
+    sales: document.getElementById("tab-sales"),
+  };
+
+  Object.entries(panels).forEach(([k, el]) => {
+    if (!el) return;
+    el.style.display = k === tabName ? "" : "none";
+  });
+
+  // opcional: al entrar, cargar data
+  if (tabName === "products" && typeof loadAdminProducts === "function") {
+    loadAdminProducts();
+  }
+  if (tabName === "sellers" && typeof loadSellers === "function") {
+    loadSellers();
+  }
+  if (tabName === "sales" && typeof loadSales === "function") {
+    loadSales();
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab-btn");
+  if (!btn) return;
+  setActiveTab(btn.dataset.tab);
+});
 
   </script>
 </body>
