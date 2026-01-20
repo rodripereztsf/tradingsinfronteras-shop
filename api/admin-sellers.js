@@ -1,13 +1,16 @@
-// api/admin-sellers.js
+// api/admin-sales.js
 //
-// CRUD de vendedores TSF SHOP sobre Upstash Redis
-// Guarda en key: tsf:sellers
+// Lee Stripe Checkout Sessions (paid) y cruza seller_ref con tsf:sellers en Upstash.
+// Calcula comisión automáticamente usando commission_pct del seller.
 
+const Stripe = require("stripe");
 const { Redis } = require("@upstash/redis");
 
 function setCors(res) {
+  // Podés dejar "*" como en admin-sellers por ahora, ya que tu admin panel es público estático.
+  // Si querés endurecer seguridad, lo ajustamos luego con allowlist.
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
@@ -22,24 +25,15 @@ async function getRedis() {
   return redisClient;
 }
 
-async function parseBody(req) {
-  if (!req.body) return {};
-  if (typeof req.body === "string") {
-    try {
-      return JSON.parse(req.body);
-    } catch {
-      return {};
-    }
-  }
-  return req.body;
+function pctToRate(pct) {
+  const n = Number(pct);
+  if (!Number.isFinite(n)) return 0.2;
+  return Math.max(0, Math.min(1, n / 100));
 }
 
-function sanitizeRef(ref = "") {
-  return ref
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, "");
+function toISOFromUnixSeconds(sec) {
+  if (!sec) return null;
+  return new Date(sec * 1000).toISOString();
 }
 
 module.exports = async (req, res) => {
@@ -50,85 +44,157 @@ module.exports = async (req, res) => {
     return res.end();
   }
 
+  if (req.method !== "GET") {
+    res.statusCode = 405;
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: "Method not allowed" }));
+  }
+
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ error: "Falta STRIPE_SECRET_KEY en Vercel" }));
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-06-20",
+    });
+
+    // ---- Query params ----
+    const url = new URL(req.url, "http://localhost");
+    const limit = Math.min(Number(url.searchParams.get("limit") || 50), 100);
+    const starting_after = url.searchParams.get("starting_after") || undefined;
+
+    const refFilterRaw = (url.searchParams.get("ref") || "").trim().toLowerCase();
+    const days = Number(url.searchParams.get("days") || 0);
+
+    let createdGte = undefined;
+    if (Number.isFinite(days) && days > 0) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      createdGte = nowSec - Math.floor(days * 24 * 60 * 60);
+    }
+
+    // ---- Load sellers from Upstash ----
     const redis = await getRedis();
     let sellers = await redis.get("tsf:sellers");
     if (!Array.isArray(sellers)) sellers = [];
 
-    // GET: listar
-    if (req.method === "GET") {
-      revealEmails = false;
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ sellers }));
+    const sellersMap = {};
+    for (const s of sellers) {
+      if (s?.ref_id) sellersMap[String(s.ref_id).toLowerCase()] = s;
     }
 
-    // POST: crear/actualizar
-    if (req.method === "POST") {
-      const payload = await parseBody(req);
-      const name = (payload?.name || "").trim();
-      const ref_id = sanitizeRef(payload?.ref_id || "");
-      const commission_pct = Number(payload?.commission_pct ?? payload?.commission ?? 0);
+    // ---- Stripe sessions list ----
+    // Nota: list() no filtra perfecto por "paid", por eso filtramos localmente.
+    const sessions = await stripe.checkout.sessions.list({
+      limit,
+      ...(starting_after ? { starting_after } : {}),
+      ...(createdGte ? { created: { gte: createdGte } } : {}),
+      // expandimos customer para email si está disponible (a veces ya viene en customer_details)
+      expand: ["data.customer"],
+    });
 
-      if (!name || !ref_id) {
-        res.statusCode = 400;
-        res.setHeader("Content-Type", "application/json");
-        return res.end(JSON.stringify({ error: "Faltan campos: name o ref_id" }));
-      }
+    const paid = sessions.data.filter((s) => s.payment_status === "paid");
 
-      if (!Number.isFinite(commission_pct) || commission_pct < 0 || commission_pct > 100) {
-        res.statusCode = 400;
-        res.setHeader("Content-Type", "application/json");
-        return res.end(JSON.stringify({ error: "commission_pct inválida (0 a 100)" }));
-      }
+    // Normalizamos ventas
+    let sales = paid.map((s) => {
+      const seller_ref =
+        (s.metadata && (s.metadata.seller_ref || s.metadata.sellerRef)) ||
+        s.client_reference_id ||
+        "";
 
-      const normalized = {
-        id: ref_id,
-        name,
-        ref_id,
-        commission_pct,
-        is_active: payload?.is_active !== false,
-        created_at: payload?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const seller_ref_norm = String(seller_ref || "").trim().toLowerCase();
+
+      const amount_total = typeof s.amount_total === "number" ? s.amount_total : 0; // centavos
+      const currency = (s.currency || "usd").toLowerCase();
+
+      const customer_email =
+        s.customer_details?.email ||
+        (typeof s.customer === "object" ? s.customer.email : null) ||
+        null;
+
+      return {
+        session_id: s.id,
+        created: toISOFromUnixSeconds(s.created),
+        amount_total,
+        currency,
+        customer_email,
+        seller_ref: seller_ref_norm || null,
+        payment_intent: s.payment_intent || null,
       };
+    });
 
-      const idx = sellers.findIndex((s) => s.ref_id === ref_id);
-      if (idx >= 0) sellers[idx] = { ...sellers[idx], ...normalized };
-      else sellers.push(normalized);
-
-      await redis.set("tsf:sellers", sellers);
-
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ seller: normalized, sellers }));
+    // Filtro por seller_ref si viene
+    if (refFilterRaw) {
+      sales = sales.filter((x) => (x.seller_ref || "") === refFilterRaw);
     }
 
-    // DELETE: borrar
-    if (req.method === "DELETE") {
-      const body = await parseBody(req);
-      const ref_id = sanitizeRef(body?.ref_id || body?.id || "");
+    // Agrupamos y calculamos comisiones
+    const bySeller = {};
 
-      if (!ref_id) {
-        res.statusCode = 400;
-        res.setHeader("Content-Type", "application/json");
-        return res.end(JSON.stringify({ error: "Falta ref_id para borrar" }));
+    for (const sale of sales) {
+      const ref = sale.seller_ref || "sin_ref";
+      const seller = sellersMap[ref] || null;
+
+      const commission_rate = seller ? pctToRate(seller.commission_pct) : 0; // sin ref => 0 (podés poner default si querés)
+      const commission_amount = Math.round(sale.amount_total * commission_rate);
+
+      if (!bySeller[ref]) {
+        bySeller[ref] = {
+          seller_ref: ref,
+          seller: seller
+            ? {
+                id: seller.id,
+                name: seller.name,
+                ref_id: seller.ref_id,
+                commission_pct: seller.commission_pct,
+                is_active: seller.is_active,
+              }
+            : null,
+          totals: {
+            orders: 0,
+            gross_amount_total: 0, // centavos
+            commission_total: 0,   // centavos
+          },
+          orders: [],
+        };
       }
 
-      sellers = sellers.filter((s) => s.ref_id !== ref_id);
-      await redis.set("tsf:sellers", sellers);
+      bySeller[ref].totals.orders += 1;
+      bySeller[ref].totals.gross_amount_total += sale.amount_total;
+      bySeller[ref].totals.commission_total += commission_amount;
 
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ ok: true }));
+      bySeller[ref].orders.push({
+        ...sale,
+        commission_amount,   // centavos
+        commission_rate,     // 0.30 por ej
+      });
     }
 
-    res.statusCode = 405;
+    // Orden opcional: mayor venta primero
+    const summary_by_seller = Object.values(bySeller).sort(
+      (a, b) => (b.totals.gross_amount_total || 0) - (a.totals.gross_amount_total || 0)
+    );
+
+    res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Method not allowed" }));
+    return res.end(
+      JSON.stringify({
+        ok: true,
+        page: {
+          has_more: sessions.has_more,
+          next_starting_after: sessions.data.length ? sessions.data[sessions.data.length - 1].id : null,
+          returned_paid: sales.length,
+        },
+        sales,
+        summary_by_seller,
+      })
+    );
   } catch (err) {
-    console.error("Error en /api/admin-sellers:", err);
+    console.error("Error en /api/admin-sales:", err);
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Internal server error" }));
+    return res.end(JSON.stringify({ error: err.message || "Internal server error" }));
   }
 };
