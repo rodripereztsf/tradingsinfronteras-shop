@@ -1,4 +1,106 @@
 // ===============================
+// TSF: Persistir seller_ref (URL + localStorage)
+// ===============================
+(function tsfPersistSellerRef() {
+  const SITE_ORIGIN = "https://tradingsinfronteras.shop"; // dominio oficial
+  const u = new URL(window.location.href);
+
+  // 1) Si viene ref en URL, lo guardamos
+  const incoming = (u.searchParams.get("ref") || "").trim().toLowerCase();
+  if (incoming) localStorage.setItem("tsf_seller_ref", incoming);
+
+  // 2) Si NO viene ref, pero hay uno guardado, lo reinyectamos en la URL sin recargar
+  const stored = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
+  if (!incoming && stored) {
+    u.searchParams.set("ref", stored);
+    history.replaceState(null, "", u.pathname + "?" + u.searchParams.toString() + (u.hash || ""));
+  }
+
+  // 3) Cuando navegás con hash (#colecciones), aseguramos que ref quede en URL
+  window.addEventListener("hashchange", () => {
+    const uu = new URL(window.location.href);
+    const s = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
+    if (s && !uu.searchParams.get("ref")) {
+      uu.searchParams.set("ref", s);
+      history.replaceState(null, "", uu.pathname + "?" + uu.searchParams.toString() + (uu.hash || ""));
+    }
+  });
+
+  // 4) Parchear links internos para arrastrar ref (cart.html, index.html, etc.)
+  function patchLinks() {
+    const ref = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
+    if (!ref) return;
+
+    document.querySelectorAll("a[href]").forEach(a => {
+      const href = a.getAttribute("href");
+      if (!href) return;
+
+      // ignorar externos y mailto/tel
+      if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      // Convertimos a URL relativa al sitio
+      const target = new URL(href, SITE_ORIGIN + u.pathname);
+
+      // solo si apunta a nuestro sitio (rutas relativas)
+      target.searchParams.set("ref", ref);
+
+      // Mantener #hash si existía
+      a.setAttribute("href", target.pathname + "?" + target.searchParams.toString() + (target.hash || ""));
+    });
+  }
+
+  // correr al cargar
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", patchLinks);
+  } else {
+    patchLinks();
+  }
+})();
+
+// ===============================
+// TSF: Carrito por vendedor (namespace)
+// ===============================
+function tsfGetActiveSellerRef() {
+  const u = new URL(window.location.href);
+  return (u.searchParams.get("ref") || localStorage.getItem("tsf_seller_ref") || "sin_ref")
+    .trim()
+    .toLowerCase();
+}
+
+function tsfCartKey() {
+  return `tsf_cart:${tsfGetActiveSellerRef()}`;
+}
+
+// Helpers para leer/escribir carrito
+function tsfLoadCart() {
+  try {
+    const raw = localStorage.getItem(tsfCartKey());
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function tsfSaveCart(items) {
+  localStorage.setItem(tsfCartKey(), JSON.stringify(Array.isArray(items) ? items : []));
+}
+
+// Opcional: si hoy tenías un carrito global (ej "tsf_cart"), migrarlo una vez al carrito del seller actual
+(function tsfMigrateLegacyCart() {
+  const legacyKeys = ["tsf_cart", "tsf_cart_items"]; // ajustá si tenés otros nombres
+  for (const k of legacyKeys) {
+    const raw = localStorage.getItem(k);
+    if (!raw) continue;
+
+    // Si ya existe carrito por seller, no pisamos
+    if (!localStorage.getItem(tsfCartKey())) {
+      localStorage.setItem(tsfCartKey(), raw);
+    }
+    localStorage.removeItem(k);
+  }
+})();
+
+// ===============================
 // CARRITO EN LOCALSTORAGE
 // ===============================
 
@@ -61,10 +163,69 @@ function formatUsdFromCents(cents) {
   return `USD ${n.toFixed(2)}`;
 }
 
-// Cargar carrito desde localStorage
+// ===============================
+// TSF: SELLER REF (persistente)
+// ===============================
+function getActiveSellerRef() {
+  try {
+    const u = new URL(window.location.href);
+    const incoming = (u.searchParams.get("ref") || "").trim().toLowerCase();
+    if (incoming) {
+      localStorage.setItem("tsf_seller_ref", incoming);
+      return incoming;
+    }
+  } catch {}
+
+  const stored = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
+  return stored || "sin_ref";
+}
+
+// Mantener ref en la URL (para que no “se pierda” al navegar)
+(function keepRefInUrl() {
+  const ref = getActiveSellerRef();
+  if (!ref || ref === "sin_ref") return;
+
+  try {
+    const u = new URL(window.location.href);
+    if (!u.searchParams.get("ref")) {
+      u.searchParams.set("ref", ref);
+      history.replaceState(null, "", u.pathname + "?" + u.searchParams.toString() + (u.hash || ""));
+    }
+
+    window.addEventListener("hashchange", () => {
+      const uu = new URL(window.location.href);
+      if (!uu.searchParams.get("ref")) {
+        uu.searchParams.set("ref", ref);
+        history.replaceState(null, "", uu.pathname + "?" + uu.searchParams.toString() + (uu.hash || ""));
+      }
+    });
+  } catch {}
+})();
+
+// ===============================
+// TSF: CART KEY por vendedor
+// ===============================
+function getCartStorageKey() {
+  const ref = getActiveSellerRef();
+  return `tsf_cart:${ref}`;
+}
+
+// Migrar carrito viejo (tsf_cart) al carrito del seller actual (una sola vez)
+(function migrateLegacyCartOnce() {
+  const legacy = localStorage.getItem("tsf_cart");
+  if (!legacy) return;
+
+  const newKey = getCartStorageKey();
+  if (!localStorage.getItem(newKey)) {
+    localStorage.setItem(newKey, legacy);
+  }
+  localStorage.removeItem("tsf_cart");
+})();
+
+// Cargar carrito desde localStorage (por vendedor)
 function loadCartFromStorage() {
   try {
-    const raw = localStorage.getItem("tsf_cart");
+    const raw = localStorage.getItem(getCartStorageKey());
     const parsed = raw ? JSON.parse(raw) : [];
     cart = Array.isArray(parsed) ? parsed : [];
   } catch (e) {
@@ -74,10 +235,10 @@ function loadCartFromStorage() {
   return cart;
 }
 
-// Guardar carrito en localStorage
+// Guardar carrito en localStorage (por vendedor)
 function saveCartToStorage() {
   try {
-    localStorage.setItem("tsf_cart", JSON.stringify(cart));
+    localStorage.setItem(getCartStorageKey(), JSON.stringify(cart));
   } catch (e) {
     console.error("Error guardando carrito en localStorage:", e);
   }
