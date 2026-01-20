@@ -1262,7 +1262,15 @@ document.addEventListener("click", (e) => {
 // SELLERS (ADMIN)
 // ===============================
 
+// Dominio público (para links y UI)
 const BASE_URL = "https://tradingsinfronteras.shop";
+
+// ✅ Origen real de la API (hoy está en vercel.app)
+// Si mañana movés la API al dominio oficial, podés dejar que use location.origin.
+const API_ORIGIN =
+  (location.hostname === "tradingsinfronteras.shop" || location.hostname === "www.tradingsinfronteras.shop")
+    ? "https://tradingsinfronteras-shop.vercel.app"
+    : location.origin;
 
 function esc(s) {
   return String(s || "")
@@ -1273,22 +1281,32 @@ function esc(s) {
     .replaceAll("'", "&#039;");
 }
 
-async function apiJson(url, options) {
-  const res = await fetch(url, options);
+async function apiJson(path, options = {}) {
+  const url = `${API_ORIGIN}${path}`;
+
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
   const text = await res.text();
   let data = {};
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
   if (!res.ok) {
-    console.error("API ERROR:", res.status, data);
+    console.error("API ERROR:", res.status, url, data);
     throw new Error(data?.error || data?.message || `Error ${res.status}`);
   }
+
   return data;
 }
 
 function sellerLink(refId) {
-  return `https://tradingsinfronteras.shop/?ref=${encodeURIComponent(refId)}`;
+  return `${BASE_URL}/?ref=${encodeURIComponent(refId)}`;
 }
-
 
 window.loadSellers = async function loadSellers() {
   const tbody = document.getElementById("sellers-table");
@@ -1296,34 +1314,39 @@ window.loadSellers = async function loadSellers() {
 
   tbody.innerHTML = `<tr><td colspan="5">Cargando...</td></tr>`;
 
-  const data = await apiJson(`${BASE_URL}/api/admin-sellers`, { method: "GET" });
-  const sellers = Array.isArray(data?.sellers) ? data.sellers : [];
+  try {
+    const data = await apiJson(`/api/admin-sellers`, { method: "GET" });
+    const sellers = Array.isArray(data?.sellers) ? data.sellers : [];
 
-  if (!sellers.length) {
-    tbody.innerHTML = `<tr><td colspan="5">No hay vendedores cargados.</td></tr>`;
-    return;
+    if (!sellers.length) {
+      tbody.innerHTML = `<tr><td colspan="5">No hay vendedores cargados.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = sellers
+      .sort((a,b) => (a.name||"").localeCompare(b.name||""))
+      .map((s) => {
+        const link = sellerLink(s.ref_id);
+        return `
+          <tr>
+            <td>${esc(s.name)}</td>
+            <td><b>${esc(s.ref_id)}</b></td>
+            <td>${Number(s.commission_pct || 0).toFixed(2)}%</td>
+            <td>
+              <a href="${link}" target="_blank" rel="noopener">Abrir link</a>
+              <button class="btn small" type="button" onclick="copySellerLink('${esc(s.ref_id)}')">Copiar</button>
+            </td>
+            <td>
+              <button class="btn small danger" type="button" onclick="deleteSeller('${esc(s.ref_id)}')">Eliminar</button>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5">❌ Error cargando vendedores. Abrí consola (F12) para ver detalle.</td></tr>`;
+    console.error(e);
   }
-
-  tbody.innerHTML = sellers
-    .sort((a,b) => (a.name||"").localeCompare(b.name||""))
-    .map((s) => {
-      const link = sellerLink(s.ref_id);
-      return `
-        <tr>
-          <td>${esc(s.name)}</td>
-          <td><b>${esc(s.ref_id)}</b></td>
-          <td>${Number(s.commission_pct || 0).toFixed(2)}%</td>
-          <td>
-            <a href="${link}" target="_blank" rel="noopener">Abrir link</a>
-            <button class="btn small" type="button" onclick="copySellerLink('${esc(s.ref_id)}')">Copiar</button>
-          </td>
-          <td>
-            <button class="btn small danger" type="button" onclick="deleteSeller('${esc(s.ref_id)}')">Eliminar</button>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
 };
 
 window.createSeller = async function createSeller() {
@@ -1344,30 +1367,38 @@ window.createSeller = async function createSeller() {
     return;
   }
 
-  await apiJson(`${BASE_URL}/api/admin-sellers`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, ref_id, commission_pct }),
-  });
+  try {
+    await apiJson(`/api/admin-sellers`, {
+      method: "POST",
+      body: JSON.stringify({ name, ref_id, commission_pct }),
+    });
 
-  if (nameEl) nameEl.value = "";
-  if (refEl) refEl.value = "";
-  if (commEl) commEl.value = "";
+    if (nameEl) nameEl.value = "";
+    if (refEl) refEl.value = "";
+    if (commEl) commEl.value = "";
 
-  await window.loadSellers();
-  alert("✅ Vendedor creado");
+    await window.loadSellers();
+    alert("✅ Vendedor creado");
+  } catch (e) {
+    console.error(e);
+    alert("❌ Error creando vendedor. Mirá consola (F12).");
+  }
 };
 
 window.deleteSeller = async function deleteSeller(ref_id) {
   if (!confirm(`¿Eliminar vendedor ${ref_id}?`)) return;
 
-  await apiJson(`${BASE_URL}/api/admin-sellers`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ref_id }),
-  });
+  try {
+    await apiJson(`/api/admin-sellers`, {
+      method: "DELETE",
+      body: JSON.stringify({ ref_id }),
+    });
 
-  await window.loadSellers();
+    await window.loadSellers();
+  } catch (e) {
+    console.error(e);
+    alert("❌ Error eliminando vendedor. Mirá consola (F12).");
+  }
 };
 
 window.copySellerLink = async function copySellerLink(ref_id) {
@@ -1379,6 +1410,7 @@ window.copySellerLink = async function copySellerLink(ref_id) {
     prompt("Copiá el link:", link);
   }
 };
+
 
   </script>
 </body>
