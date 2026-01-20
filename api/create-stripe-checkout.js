@@ -86,7 +86,11 @@ export default async function handler(req, res) {
 
       // ✅ esto hace que en Stripe lo veas claro
       client_reference_id: seller_ref || undefined,
-
+payment_intent_data: {
+metadata: {
+seller_ref: seller_ref || "",
+},
+},
       metadata: {
         name: String(customer.name),
         email: String(customer.email),
