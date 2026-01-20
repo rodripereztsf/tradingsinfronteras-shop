@@ -618,4 +618,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Productos (solo si hay secciones)
   initProducts();
+  getSellerRef();
 });
