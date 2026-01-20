@@ -516,6 +516,7 @@ async function payWithStripe(currency = "usd") {
         email: buyerEmail,
         whatsapp: buyerWhatsApp,
         referral_id: referralId,
+        seller_ref: referralId,
       },
       cart: cart.map((item) => ({
         name: item.name,
