@@ -510,21 +510,21 @@ async function payWithStripe(currency = "usd") {
   setPayButtonLoading(true, "Redirigiendo…");
 
   try {
-    const payload = {
-      customer: {
-        name: buyerName,
-        email: buyerEmail,
-        whatsapp: buyerWhatsApp,
-        referral_id: referralId,
-        seller_ref: referralId,
-      },
-      cart: cart.map((item) => ({
-        name: item.name,
-        price: Number(item.price),
-        qty: Number(item.quantity || 1),
-      })),
-      currency: String(currency).trim().toLowerCase(),
-    };
+ const payload = {
+  customer: {
+    name: buyerName,
+    email: buyerEmail,
+    whatsapp: buyerWhatsApp,
+  },
+  seller_ref: referralId, // ✅ ACÁ (ROOT)
+  cart: cart.map((item) => ({
+    name: item.name,
+    price: Number(item.price),
+    qty: Number(item.quantity || 1),
+  })),
+  currency: String(currency).trim().toLowerCase(),
+};
+
 
     const data = await fetchJsonDebug(`${API_BASE}/api/create-stripe-checkout`, {
       method: "POST",
