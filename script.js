@@ -267,6 +267,15 @@ function getSellerRef() {
 
 function clearSellerRef() {
   localStorage.removeItem("tsf_seller_ref");
+  // ✅ Captura temprana del ref apenas carga el JS
+(function bootstrapReferral() {
+  try {
+    const url = new URL(window.location.href);
+    const ref = (url.searchParams.get("ref") || "").trim();
+    if (ref) localStorage.setItem("tsf_seller_ref", ref);
+  } catch {}
+})();
+
 }
 
 // ===============================
