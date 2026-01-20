@@ -75,7 +75,7 @@ export default async function handler(req, res) {
 
     const baseUrl =
       (process.env.PUBLIC_SITE_URL && process.env.PUBLIC_SITE_URL.trim()) ||
-      "https://rodripereztsf.github.io";
+      "https://tradingsinfronteras.shop";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
