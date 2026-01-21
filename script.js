@@ -1,188 +1,46 @@
-// ===============================
-// TSF: Persistir seller_ref (URL + localStorage)
-// ===============================
-(function tsfPersistSellerRef() {
-  const SITE_ORIGIN = "https://tradingsinfronteras.shop"; // dominio oficial
-  const u = new URL(window.location.href);
+// ======================================================
+// TSF SHOP — script.js (ref + carrito por vendedor)
+// Dominio oficial: https://tradingsinfronteras.shop
+// API: https://tradingsinfronteras-shop.vercel.app
+// ======================================================
 
-  // 1) Si viene ref en URL, lo guardamos
-  const incoming = (u.searchParams.get("ref") || "").trim().toLowerCase();
-  if (incoming) localStorage.setItem("tsf_seller_ref", incoming);
-
-  // 2) Si NO viene ref, pero hay uno guardado, lo reinyectamos en la URL sin recargar
-  const stored = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
-  if (!incoming && stored) {
-    u.searchParams.set("ref", stored);
-    history.replaceState(null, "", u.pathname + "?" + u.searchParams.toString() + (u.hash || ""));
-  }
-
-  // 3) Cuando navegás con hash (#colecciones), aseguramos que ref quede en URL
-  window.addEventListener("hashchange", () => {
-    const uu = new URL(window.location.href);
-    const s = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
-    if (s && !uu.searchParams.get("ref")) {
-      uu.searchParams.set("ref", s);
-      history.replaceState(null, "", uu.pathname + "?" + uu.searchParams.toString() + (uu.hash || ""));
-    }
-  });
-
-  // 4) Parchear links internos para arrastrar ref (cart.html, index.html, etc.)
-  function patchLinks() {
-    const ref = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
-    if (!ref) return;
-
-    document.querySelectorAll("a[href]").forEach(a => {
-      const href = a.getAttribute("href");
-      if (!href) return;
-
-      // ignorar externos y mailto/tel
-      if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
-
-      // Convertimos a URL relativa al sitio
-      const target = new URL(href, SITE_ORIGIN + u.pathname);
-
-      // solo si apunta a nuestro sitio (rutas relativas)
-      target.searchParams.set("ref", ref);
-
-      // Mantener #hash si existía
-      a.setAttribute("href", target.pathname + "?" + target.searchParams.toString() + (target.hash || ""));
-    });
-  }
-
-  // correr al cargar
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", patchLinks);
-  } else {
-    patchLinks();
-  }
-})();
+const SITE_ORIGIN = "https://tradingsinfronteras.shop";
+const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
 
 // ===============================
-// TSF: Carrito por vendedor (namespace)
+// STATE
 // ===============================
-function tsfGetActiveSellerRef() {
-  const u = new URL(window.location.href);
-  return (u.searchParams.get("ref") || localStorage.getItem("tsf_seller_ref") || "sin_ref")
-    .trim()
-    .toLowerCase();
-}
-
-function tsfCartKey() {
-  return `tsf_cart:${tsfGetActiveSellerRef()}`;
-}
-
-// Helpers para leer/escribir carrito
-function tsfLoadCart() {
-  try {
-    const raw = localStorage.getItem(tsfCartKey());
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function tsfSaveCart(items) {
-  localStorage.setItem(tsfCartKey(), JSON.stringify(Array.isArray(items) ? items : []));
-}
-
-// Opcional: si hoy tenías un carrito global (ej "tsf_cart"), migrarlo una vez al carrito del seller actual
-(function tsfMigrateLegacyCart() {
-  const legacyKeys = ["tsf_cart", "tsf_cart_items"]; // ajustá si tenés otros nombres
-  for (const k of legacyKeys) {
-    const raw = localStorage.getItem(k);
-    if (!raw) continue;
-
-    // Si ya existe carrito por seller, no pisamos
-    if (!localStorage.getItem(tsfCartKey())) {
-      localStorage.setItem(tsfCartKey(), raw);
-    }
-    localStorage.removeItem(k);
-  }
-})();
-
-// ===============================
-// CARRITO EN LOCALSTORAGE
-// ===============================
-
 let cart = [];
 let allProducts = [];
 
 // ===============================
-// TOAST (mensaje flotante)
+// SELLER REF — ÚNICO SISTEMA
 // ===============================
 
-function ensureToast() {
-  let toast = document.getElementById("tsf-toast");
-  if (toast) return toast;
-
-  toast = document.createElement("div");
-  toast.id = "tsf-toast";
-  toast.style.cssText = `
-    position: fixed;
-    left: 50%;
-    top: 46%;
-    transform: translate(-50%, -50%);
-    background: rgba(0,0,0,.88);
-    color: #fff;
-    border: 1px solid rgba(0,207,255,.35);
-    padding: 12px 16px;
-    border-radius: 14px;
-    font-size: 14px;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .2s ease;
-    max-width: 92vw;
-    text-align: center;
-    box-shadow: 0 16px 50px rgba(0,0,0,.65);
-  `;
-
-  document.body.appendChild(toast);
-  return toast;
-}
-
-let toastTimer = null;
-function showToast(message) {
-  const toast = ensureToast();
-  toast.textContent = message;
-  toast.style.opacity = "1";
-
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.style.opacity = "0";
-  }, 1400);
-}
-
-// ===============================
-// HELPERS
-// ===============================
-
-// Formatear precio desde centavos
-function formatUsdFromCents(cents) {
-  const n = Number(cents || 0) / 100;
-  return `USD ${n.toFixed(2)}`;
-}
-
-// ===============================
-// TSF: SELLER REF (persistente)
-// ===============================
-function getActiveSellerRef() {
+// 1) URL manda siempre. Si no hay, usamos localStorage. Si no hay nada, "sin_ref".
+function getSellerRef() {
+  let incoming = "";
   try {
     const u = new URL(window.location.href);
-    const incoming = (u.searchParams.get("ref") || "").trim().toLowerCase();
-    if (incoming) {
-      localStorage.setItem("tsf_seller_ref", incoming);
-      return incoming;
-    }
+    incoming = (u.searchParams.get("ref") || "").trim().toLowerCase();
   } catch {}
+
+  if (incoming) {
+    localStorage.setItem("tsf_seller_ref", incoming);
+    return incoming;
+  }
 
   const stored = (localStorage.getItem("tsf_seller_ref") || "").trim().toLowerCase();
   return stored || "sin_ref";
 }
 
-// Mantener ref en la URL (para que no “se pierda” al navegar)
-(function keepRefInUrl() {
-  const ref = getActiveSellerRef();
+function clearSellerRef() {
+  localStorage.removeItem("tsf_seller_ref");
+}
+
+// 2) Mantener ref en la URL (sin bloquear cambios: si entra ref nuevo, gana el nuevo).
+function ensureRefInUrl() {
+  const ref = getSellerRef();
   if (!ref || ref === "sin_ref") return;
 
   try {
@@ -191,35 +49,72 @@ function getActiveSellerRef() {
       u.searchParams.set("ref", ref);
       history.replaceState(null, "", u.pathname + "?" + u.searchParams.toString() + (u.hash || ""));
     }
+  } catch {}
+}
 
-    window.addEventListener("hashchange", () => {
-      const uu = new URL(window.location.href);
-      if (!uu.searchParams.get("ref")) {
-        uu.searchParams.set("ref", ref);
-        history.replaceState(null, "", uu.pathname + "?" + uu.searchParams.toString() + (uu.hash || ""));
-      }
+function patchInternalLinksWithRef() {
+  const ref = getSellerRef();
+  if (!ref || ref === "sin_ref") return;
+
+  try {
+    const basePath = window.location.pathname;
+
+    document.querySelectorAll("a[href]").forEach((a) => {
+      const href = a.getAttribute("href");
+      if (!href) return;
+
+      // ignorar externos y mailto/tel
+      if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      const target = new URL(href, SITE_ORIGIN + basePath);
+      target.searchParams.set("ref", ref);
+
+      a.setAttribute("href", target.pathname + "?" + target.searchParams.toString() + (target.hash || ""));
     });
   } catch {}
+}
+
+// Ejecutar ref guardado + url estable + links estables
+(function bootstrapRef() {
+  // Esto guarda ref si viene en URL (pisando el anterior)
+  getSellerRef();
+  // Esto asegura que si navegás interno sin ref, lo mantiene visible
+  ensureRefInUrl();
+
+  window.addEventListener("hashchange", () => {
+    ensureRefInUrl();
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", patchInternalLinksWithRef);
+  } else {
+    patchInternalLinksWithRef();
+  }
 })();
 
 // ===============================
-// TSF: CART KEY por vendedor
+// CARRITO POR VENDEDOR
 // ===============================
+
 function getCartStorageKey() {
-  const ref = getActiveSellerRef();
+  const ref = getSellerRef();
   return `tsf_cart:${ref}`;
 }
 
-// Migrar carrito viejo (tsf_cart) al carrito del seller actual (una sola vez)
-(function migrateLegacyCartOnce() {
-  const legacy = localStorage.getItem("tsf_cart");
-  if (!legacy) return;
-
+// Migrar carrito legacy global (tsf_cart / tsf_cart_items) al carrito del seller actual (una vez)
+(function migrateLegacyCart() {
+  const legacyKeys = ["tsf_cart", "tsf_cart_items"];
   const newKey = getCartStorageKey();
-  if (!localStorage.getItem(newKey)) {
-    localStorage.setItem(newKey, legacy);
+
+  for (const k of legacyKeys) {
+    const raw = localStorage.getItem(k);
+    if (!raw) continue;
+
+    if (!localStorage.getItem(newKey)) {
+      localStorage.setItem(newKey, raw);
+    }
+    localStorage.removeItem(k);
   }
-  localStorage.removeItem("tsf_cart");
 })();
 
 // Cargar carrito desde localStorage (por vendedor)
@@ -251,6 +146,71 @@ function updateCartBadge() {
 
   const count = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
   btn.textContent = `Carrito (${count})`;
+}
+
+// ===============================
+// TOAST (mensaje flotante)
+// ===============================
+function ensureToast() {
+  let toast = document.getElementById("tsf-toast");
+  if (toast) return toast;
+
+  toast = document.createElement("div");
+  toast.id = "tsf-toast";
+  toast.style.cssText = `
+    position: fixed;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,.88);
+    color: #fff;
+    border: 1px solid rgba(0,207,255,.35);
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    max-width: 92vw;
+    text-align: center;
+    box-shadow: 0 16px 50px rgba(0,0,0,.65);
+  `;
+  document.body.appendChild(toast);
+  return toast;
+}
+
+let toastTimer = null;
+function showToast(message) {
+  const toast = ensureToast();
+  toast.textContent = message;
+  toast.style.opacity = "1";
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.style.opacity = "0";
+  }, 1400);
+}
+
+// ===============================
+// HELPERS
+// ===============================
+
+// Formatear precio desde centavos
+function formatUsdFromCents(cents) {
+  const n = Number(cents || 0) / 100;
+  return `USD ${n.toFixed(2)}`;
+}
+
+// Helper para obtener URL de imagen desde distintos campos posibles
+function getProductImageUrl(product) {
+  return (
+    product.image_url ||
+    product.img ||
+    product.image ||
+    product.thumbnail_url ||
+    null
+  );
 }
 
 // ===============================
@@ -315,7 +275,6 @@ function changeQty(index, delta) {
 // ===============================
 // RENDER DEL CARRITO (cart.html)
 // ===============================
-
 function renderCartPage() {
   const itemsContainer = document.getElementById("cart-items");
   const totalSpan = document.getElementById("cart-total");
@@ -371,12 +330,11 @@ function renderCartPage() {
 // ===============================
 // FETCH GENERAL DE PRODUCTOS
 // ===============================
-
 async function fetchAllProducts() {
   // si ya los cargamos, devolvemos cache
   if (allProducts && allProducts.length) return allProducts;
 
-  const url = "https://tradingsinfronteras-shop.vercel.app/api/products";
+  const url = `${API_BASE}/api/products`;
 
   const res = await fetch(url);
   const data = await res.json();
@@ -389,60 +347,9 @@ async function fetchAllProducts() {
   return allProducts;
 }
 
-// Helper para obtener URL de imagen desde distintos campos posibles
-function getProductImageUrl(product) {
-  return (
-    product.image_url ||
-    product.img ||
-    product.image ||
-    product.thumbnail_url ||
-    null
-  );
-}
-
-// ===============================
-// REFERRAL (VENDEDOR) - captura ?ref= y lo persiste
-// ===============================
-
-function getSellerRefFromUrl() {
-  try {
-    const url = new URL(window.location.href);
-    return (url.searchParams.get("ref") || "").trim();
-  } catch {
-    return "";
-  }
-}
-
-function getSellerRef() {
-  const fromStore = (localStorage.getItem("tsf_seller_ref") || "").trim();
-  if (fromStore) return fromStore;
-
-  const fromUrl = getSellerRefFromUrl();
-  if (fromUrl) {
-    localStorage.setItem("tsf_seller_ref", fromUrl);
-    return fromUrl;
-  }
-
-  return "";
-}
-
-function clearSellerRef() {
-  localStorage.removeItem("tsf_seller_ref");
-  // ✅ Captura temprana del ref apenas carga el JS
-(function bootstrapReferral() {
-  try {
-    const url = new URL(window.location.href);
-    const ref = (url.searchParams.get("ref") || "").trim();
-    if (ref) localStorage.setItem("tsf_seller_ref", ref);
-  } catch {}
-})();
-
-}
-
 // ===============================
 // RENDER: PRODUCTOS DESTACADOS
 // ===============================
-
 function renderFeaturedProducts(products) {
   const container = document.getElementById("products-grid");
   if (!container) return;
@@ -489,7 +396,6 @@ function renderFeaturedProducts(products) {
 // ===============================
 // RENDER: CATÁLOGO POR CATEGORÍAS
 // ===============================
-
 function renderProductsByCategory(products) {
   const containersMap = {
     course: "grid-courses",
@@ -499,13 +405,11 @@ function renderProductsByCategory(products) {
     other: "grid-other",
   };
 
-  // Si no existe ninguno de estos contenedores, no hacemos nada
   const anyContainerExists = Object.values(containersMap).some(
     (id) => document.getElementById(id) !== null
   );
   if (!anyContainerExists) return;
 
-  // Limpiamos todos los contenedores
   Object.values(containersMap).forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = "";
@@ -542,7 +446,6 @@ function renderProductsByCategory(products) {
     container.appendChild(card);
   });
 
-  // Si alguna categoría quedó vacía
   Object.entries(containersMap).forEach(([key, id]) => {
     const container = document.getElementById(id);
     if (!container) return;
@@ -556,7 +459,6 @@ function renderProductsByCategory(products) {
   });
 }
 
-// Inicializador de todo el catálogo
 async function initProducts() {
   try {
     const products = await fetchAllProducts();
@@ -575,11 +477,9 @@ async function initProducts() {
 // ===============================
 // VALIDACIÓN DATOS DE CONTACTO (cart.html)
 // ===============================
-
 const nameInput = document.getElementById("buyer-name");
 const emailInput = document.getElementById("buyer-email");
 const whatsappInput = document.getElementById("buyer-whatsapp");
-const payButton = document.getElementById("pay-button");
 
 function isValidEmail(email) {
   return /\S+@\S+\.\S+/.test(email);
@@ -590,6 +490,7 @@ function isValidWhatsapp(value) {
 }
 
 function updatePayButtonState() {
+  const payButton = document.getElementById("pay-button");
   if (!nameInput || !emailInput || !whatsappInput || !payButton) return;
 
   const nameOk = nameInput.value.trim().length > 2;
@@ -606,14 +507,10 @@ function updatePayButtonState() {
 // ===============================
 // STRIPE
 // ===============================
-
-const API_BASE = "https://tradingsinfronteras-shop.vercel.app";
-
 function setPayButtonLoading(isLoading, labelText) {
   const btn = document.getElementById("pay-button");
   if (!btn) return;
 
-  // Si tenés un span interno, lo cambia; si no, cambia texto del botón
   const label = btn.querySelector(".btn-label");
   if (label && labelText) label.textContent = labelText;
   if (!label && labelText) btn.textContent = labelText;
@@ -622,7 +519,6 @@ function setPayButtonLoading(isLoading, labelText) {
   btn.disabled = !!isLoading;
 }
 
-// helper: fetch con debug de error aunque no sea JSON
 async function fetchJsonDebug(url, options) {
   const res = await fetch(url, options);
   const text = await res.text();
@@ -646,7 +542,6 @@ async function fetchJsonDebug(url, options) {
   return data;
 }
 
-// currency: "usd" o "ars"
 async function payWithStripe(currency = "usd") {
   loadCartFromStorage();
 
@@ -664,28 +559,27 @@ async function payWithStripe(currency = "usd") {
     return;
   }
 
-  // Referral ID (vendedor)
+  // ✅ Referral ID (vendedor) — ÚNICO
   const referralId = getSellerRef();
   console.log("🧾 Referral ID detectado:", referralId || "DIRECTO");
 
   setPayButtonLoading(true, "Redirigiendo…");
 
   try {
- const payload = {
-  customer: {
-    name: buyerName,
-    email: buyerEmail,
-    whatsapp: buyerWhatsApp,
-  },
-  seller_ref: referralId, // ✅ ACÁ (ROOT)
-  cart: cart.map((item) => ({
-    name: item.name,
-    price: Number(item.price),
-    qty: Number(item.quantity || 1),
-  })),
-  currency: String(currency).trim().toLowerCase(),
-};
-
+    const payload = {
+      customer: {
+        name: buyerName,
+        email: buyerEmail,
+        whatsapp: buyerWhatsApp,
+      },
+      seller_ref: referralId === "sin_ref" ? "" : referralId,
+      cart: cart.map((item) => ({
+        name: item.name,
+        price: Number(item.price),
+        qty: Number(item.quantity || 1),
+      })),
+      currency: String(currency).trim().toLowerCase(),
+    };
 
     const data = await fetchJsonDebug(`${API_BASE}/api/create-stripe-checkout`, {
       method: "POST",
@@ -726,16 +620,13 @@ window.addEventListener("pageshow", () => {
 // ===============================
 // SPLASH (solo existe si estás en index)
 // ===============================
-
 function runSplash() {
   const splash = document.getElementById("tsf-splash");
   const app = document.getElementById("tsf-app");
   if (!splash || !app) return;
 
-  // Blur SOLO al contenido, no al splash
   app.classList.add("tsf-blur");
 
-  // Fail-safe: pase lo que pase, el splash se va en 5s
   const HARD_TIMEOUT = setTimeout(() => {
     try {
       splash.style.opacity = "0";
@@ -763,8 +654,11 @@ function runSplash() {
 // ===============================
 // INICIALIZACIÓN
 // ===============================
-
 document.addEventListener("DOMContentLoaded", () => {
+  // Ref/URL/links
+  ensureRefInUrl();
+  patchInternalLinksWithRef();
+
   // Splash (si existe en la página)
   runSplash();
 
@@ -787,7 +681,9 @@ document.addEventListener("DOMContentLoaded", () => {
     updatePayButtonState();
   }
 
-  // Productos (solo si hay secciones)
+  // Productos
   initProducts();
+
+  // Solo para asegurar que el ref queda guardado desde el inicio
   getSellerRef();
 });
